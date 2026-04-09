@@ -1,0 +1,122 @@
+
+<!doctype html>
+<html>
+<head><meta charset="utf-8"/><title>Messages</title><link rel="stylesheet" href="/style.css"/></head>
+<body>
+  <div class="topbar">
+    <div class="topbarInner">
+      <a class="brand" href="/"><span class="logoDot"></span>DriveShare</a>
+      <div class="navLinks">
+        <a href="/renter.html">Search</a>
+        <a href="/owner.html">Owner</a>
+        <a href="/notifications.html">Notifications</a>
+      </div>
+    </div>
+  </div>
+
+  <main class="wrap">
+    <div class="card section">
+      <h1 style="font-size:22px;font-weight:950;">Messages</h1>
+      <div class="sub">Simple in-app chat between renter and owner.</div>
+
+      <div class="row" style="margin-top:14px">
+        <input class="input" id="carId" placeholder="car id"/>
+        <input class="input" id="otherId" placeholder="other user id"/>
+        <button class="btnOutline" id="loadBtn">Load thread</button>
+      </div>
+
+      <div class="pill" id="threadTitle" style="margin-top:14px">Loading chat…</div>
+      <div id="thread" class="card section msgBox" style="margin-top:14px; box-shadow:none;"></div>
+
+      <div class="row" style="margin-top:14px">
+        <input class="input" id="body" placeholder="type a message..." style="flex:1; min-width:260px"/>
+        <button class="btn" id="sendBtn">Send</button>
+      </div>
+
+      <pre id="out" style="margin-top:12px;display:none"></pre>
+    </div>
+  </main>
+
+<script type="module">
+import { apiGet, apiPost, readQueryParams } from "./ui.js";
+const params = readQueryParams();
+const carIdEl = document.getElementById('carId');
+const otherIdEl = document.getElementById('otherId');
+const thread = document.getElementById('thread');
+const out = document.getElementById('out');
+const threadTitle = document.getElementById('threadTitle');
+if(params.carId) carIdEl.value = params.carId;
+if(params.other) otherIdEl.value = params.other;
+
+let me = null;
+async function loadMe(){
+  const r = await apiGet('/api/auth/me');
+  me = r.ok ? r.user : null;
+}
+await loadMe();
+
+function renderMessages(msgs){
+  thread.innerHTML = '';
+  for(const m of msgs){
+    const row = document.createElement('div');
+    row.className = 'msgRow ' + (me && m.sender_id === me.id ? 'msgMine' : '');
+    row.innerHTML = `
+      <div class="msgBubble">
+        <div>${m.body}</div>
+        <div class="msgMeta">${m.created_at}</div>
+      </div>
+    `;
+    thread.appendChild(row);
+  }
+  if(!msgs.length) thread.innerHTML = '<div class="sub">No messages yet.</div>';
+  thread.scrollTop = thread.scrollHeight;
+}
+
+async function loadHeader(){
+  const carId = Number(carIdEl.value);
+  const otherId = Number(otherIdEl.value);
+
+  if(!carId || !otherId){
+    threadTitle.textContent = "Enter car id and other user id.";
+    return;
+  }
+
+  const car = await apiGet(`/api/cars/${carId}`);
+  const other = await apiGet(`/api/users/${otherId}`);
+  const meRes = await apiGet('/api/auth/me');
+
+  const carName = car.ok
+    ? (car.car.title || `${car.car.year} ${car.car.make} ${car.car.model}`)
+    : `Car #${carId}`;
+
+  const otherName = other.ok ? other.user.display_name : `User #${otherId}`;
+  const meName = meRes.ok ? meRes.user.display_name : "Guest";
+
+  threadTitle.textContent = `Chat: ${meName} ↔ ${otherName} | ${carName}`;
+}
+async function loadThread(){
+  await loadHeader();
+
+  const carId = Number(carIdEl.value);
+  const otherId = Number(otherIdEl.value);
+  const r = await apiGet(`/api/messages/thread?carId=${carId}&otherUserId=${otherId}`);
+  if(r.ok) renderMessages(r.messages);
+  else { out.style.display='block'; out.textContent = JSON.stringify(r,null,2); }
+}
+
+document.getElementById('loadBtn').addEventListener('click', loadThread);
+
+document.getElementById('sendBtn').addEventListener('click', async () => {
+  const carId = Number(carIdEl.value);
+  const otherId = Number(otherIdEl.value);
+  const body = document.getElementById('body').value;
+  const r = await apiPost('/api/messages', {carId, toUserId: otherId, body});
+  if(!r.ok){ out.style.display='block'; out.textContent = JSON.stringify(r,null,2); return; }
+  document.getElementById('body').value = '';
+  loadThread();
+});
+
+if(carIdEl.value && otherIdEl.value) loadThread();
+</script>
+</body>
+</html>

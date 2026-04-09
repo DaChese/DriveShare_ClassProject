@@ -1,0 +1,38 @@
+<!doctype html>
+<html><head><meta charset="utf-8"/><title>Login</title><link rel="stylesheet" href="/style.css"/></head>
+<body>
+  <div class="topbar">
+    <div class="topbarInner">
+      <a class="brand" href="/"><span class="logoDot"></span>DriveShare</a>
+      <div class="navLinks">
+        <a href="/renter.html">Search</a>
+        <a href="/owner.html">Owner</a>
+        <a href="/notifications.html">Notifications</a>
+      </div>
+    </div>
+  </div>
+  <main class="wrap">
+<div class="card section">
+  <h1 style="font-size:22px;font-weight:950;">Login</h1>
+  <div class="sub">Log in to book, watch, message, and pay.</div>
+  <div class="row" style="margin-top:14px">
+    <input class="input" id="email" placeholder="email" />
+    <input class="input" id="pw" placeholder="password" type="password" />
+    <button class="btn" id="loginBtn">Login</button>
+    <button class="btnOutline" id="logoutBtn">Logout</button>
+    <a class="btnOutline" href="/recover.html" style="text-decoration:none;display:inline-flex;align-items:center;">Forgot password?</a>
+  </div>
+  <pre id="out" style="margin-top:12px"></pre>
+</div>
+</main>
+  <script type="module">
+import { apiPost } from "./ui.js";
+const out = document.getElementById('out');
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  out.textContent = JSON.stringify(await apiPost('/api/auth/login', {email: email.value, password: pw.value}), null, 2);
+});
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  out.textContent = JSON.stringify(await apiPost('/api/auth/logout', {}), null, 2);
+});
+</script>
+</body></html>

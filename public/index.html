@@ -1,0 +1,77 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>DriveShare</title>
+  <link rel="stylesheet" href="/style.css"/>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbarInner">
+      <a class="brand" href="/"><span class="logoDot"></span>DriveShare</a>
+      <div class="navLinks">
+        <a href="/renter.html">Search</a>
+        <a href="/owner.html">Owner</a>
+        <a href="/notifications.html">Notifications</a>
+        <a href="/messages.html">Messages</a>
+        <a href="/login.html">Login</a>
+      </div>
+    </div>
+  </div>
+
+  <main class="wrap">
+    <section class="card hero">
+      <div>
+        <div class="heroTitle">Find the right car for your trip.</div>
+        <div class="sub" style="margin-top:8px">
+          Class project version of a peer-to-peer car rental platform (Turo-style flow).
+        </div>
+
+        <form id="heroForm" class="searchBar">
+          <input class="input" id="location" placeholder="Pickup location (ex: Detroit)" />
+          <input class="input" id="start" placeholder="Start date YYYY-MM-DD" />
+          <input class="input" id="end" placeholder="End date YYYY-MM-DD" />
+          <input class="input" id="maxPrice" placeholder="Max $/day (optional)" />
+          <button class="btn" type="submit">Search</button>
+        </form>
+
+        <div class="sub" style="margin-top:10px">
+          Tip: Location is exact match for now.
+        </div>
+      </div>
+
+      <div class="heroRight">
+        <div style="font-weight:950; font-size: 16px;">Quick links</div>
+        <div class="sub" style="margin-top:6px">
+          Register/login first if you want to book, watch, message, or pay.
+        </div>
+        <div class="row" style="margin-top:12px">
+          <a class="btnOutline" href="/register.html" style="text-decoration:none;display:inline-flex;align-items:center;">Register</a>
+          <a class="btnOutline" href="/login.html" style="text-decoration:none;display:inline-flex;align-items:center;">Login</a>
+          <a class="btnOutline" href="/recover.html" style="text-decoration:none;display:inline-flex;align-items:center;">Recover password</a>
+        </div>
+        <div class="sub" style="margin-top:12px">
+          Owner? Add listings on the Owner page and then test search + booking as a renter.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { setQueryParams } from "./ui.js";
+
+    const form = document.getElementById('heroForm');
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const loc = document.getElementById('location').value;
+      const start = document.getElementById('start').value;
+      const end = document.getElementById('end').value;
+      const maxPrice = document.getElementById('maxPrice').value;
+
+      const url = setQueryParams('/renter.html', { location: loc, start, end, maxPrice });
+      location.href = url;
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+
+<!doctype html>
+<html>
+<head><meta charset="utf-8"/><title>Notifications</title><link rel="stylesheet" href="/style.css"/></head>
+<body>
+  <div class="topbar">
+    <div class="topbarInner">
+      <a class="brand" href="/"><span class="logoDot"></span>DriveShare</a>
+      <div class="navLinks">
+        <a href="/renter.html">Search</a>
+        <a href="/owner.html">Owner</a>
+        <a href="/messages.html">Messages</a>
+      </div>
+    </div>
+  </div>
+
+  <main class="wrap">
+    <div class="card section">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+        <div>
+          <h1 style="font-size:22px;font-weight:950;">Notifications</h1>
+          <div class="sub">Watch updates, booking updates, payments, and messages.</div>
+        </div>
+        <div class="row">
+          <button class="btnOutline" id="loadBtn">Load</button>
+          <button class="btnOutline" id="markAllBtn">Mark all read</button>
+        </div>
+      </div>
+
+      <div id="list" class="gridCars" style="margin-top:14px"></div>
+      <pre id="out" style="margin-top:12px;display:none"></pre>
+    </div>
+  </main>
+
+<script type="module">
+import { apiGet, apiPost } from "./ui.js";
+
+const list = document.getElementById('list');
+const out = document.getElementById('out');
+
+function render(items){
+  list.innerHTML = '';
+  for(const n of items){
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.innerHTML = `
+      <div class="section">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+          <div style="font-weight:950;">${n.type.toUpperCase()}</div>
+          <div class="pill">${n.is_read ? 'Read' : 'New'}</div>
+        </div>
+        <div class="sub" style="margin-top:6px">${n.created_at}</div>
+        <div style="margin-top:10px">${n.text}</div>
+        <div class="row" style="margin-top:12px">
+          <button class="btnOutline" data-id="${n.id}">Mark read</button>
+        </div>
+      </div>
+    `;
+    list.appendChild(div);
+  }
+  if(!items.length) list.innerHTML = '<div class="sub">No notifications yet.</div>';
+}
+
+async function load(){
+  const r = await apiGet('/api/notifications');
+  if(r.ok) render(r.notifications);
+  else { out.style.display='block'; out.textContent = JSON.stringify(r,null,2); }
+}
+
+document.getElementById('loadBtn').addEventListener('click', load);
+list.addEventListener('click', async (e) => {
+  const btn = e.target.closest('button[data-id]');
+  if(!btn) return;
+  await apiPost(`/api/notifications/${btn.dataset.id}/read`, {});
+  load();
+});
+
+document.getElementById('markAllBtn').addEventListener('click', async () => {
+  const r = await apiGet('/api/notifications');
+  if(!r.ok) return;
+  for(const n of r.notifications){
+    if(!n.is_read) await apiPost(`/api/notifications/${n.id}/read`, {});
+  }
+  load();
+});
+
+load();
+</script>
+</body>
+</html>

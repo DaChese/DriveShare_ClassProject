@@ -1,0 +1,340 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Car - DriveShare</title>
+  <link rel="stylesheet" href="/style.css"/>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbarInner">
+      <a class="brand" href="/"><span class="logoDot"></span>DriveShare</a>
+      <div class="navLinks">
+        <a href="/renter.html">Search</a>
+        <a href="/owner.html">Owner</a>
+        <a href="/notifications.html">Notifications</a>
+        <a href="/messages.html">Messages</a>
+      </div>
+    </div>
+  </div>
+
+  <main class="wrap">
+    <div class="detailLayout">
+      <section class="card section">
+        <div class="gallery">
+          <img id="heroImg" alt="Car photo">
+        </div>
+
+        <div style="margin-top:14px">
+          <h1 id="carTitle" style="font-size:24px;font-weight:950;">Loading...</h1>
+          <div id="carMeta" class="sub" style="margin-top:6px"></div>
+        </div>
+
+        <div class="card section" style="margin-top:14px; box-shadow:none">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+            <div>
+              <div class="sub">Host</div>
+              <div id="hostName" style="font-weight:950;margin-top:6px">—</div>
+            </div>
+            <a id="msgOwner" class="btnOutline" href="/messages.html" style="text-decoration:none;display:inline-flex;align-items:center;">Message owner</a>
+          </div>
+          <div id="meInfo" class="sub" style="margin-top:10px"></div>
+        </div>
+
+        <div class="card section" style="margin-top:14px; box-shadow:none">
+          <div style="font-weight:950;">Watch this car</div>
+          <div class="sub" style="margin-top:6px">Notify me when price is low enough and my dates are open.</div>
+          <div class="row" style="margin-top:12px">
+            <input class="input" id="watchMax" placeholder="Max $/day (optional)" />
+            <input class="input" id="watchStart" placeholder="Want start YYYY-MM-DD (optional)" />
+            <input class="input" id="watchEnd" placeholder="Want end YYYY-MM-DD (optional)" />
+            <button class="btnOutline" id="watchBtn">Save watch</button>
+          </div>
+          <pre id="watchOut" style="margin-top:10px;display:none"></pre>
+        </div>
+
+        <div class="card section" style="margin-top:14px; box-shadow:none">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+            <div>
+              <div style="font-weight:950;">Availability</div>
+              <div class="sub" style="margin-top:6px">Next 30 days. Green = open, red = blocked.</div>
+            </div>
+            <button class="btnOutline" id="reloadCalBtn">Refresh</button>
+          </div>
+
+          <div class="calGrid" id="calendar"></div>
+        </div>
+
+        <div class="card section" id="ownerTools" style="margin-top:14px; box-shadow:none; display:none">
+          <div style="font-weight:950;">Owner tools: block out dates</div>
+          <div class="sub" style="margin-top:6px">Use blocks for maintenance or personal use.</div>
+
+          <div class="row" style="margin-top:12px">
+            <input class="input" id="blkStart" placeholder="Block start YYYY-MM-DD" />
+            <input class="input" id="blkEnd" placeholder="Block end YYYY-MM-DD" />
+            <input class="input" id="blkReason" placeholder="Reason (optional)" style="min-width:260px" />
+            <button class="btnOutline" id="addBlockBtn">Add block</button>
+          </div>
+
+          <div id="blocksList" class="gridCars" style="margin-top:14px"></div>
+        </div>
+      </section>
+
+      <aside class="card section stickyCard">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-weight:950;">Book</div>
+          <div class="pill" id="pricePill">—</div>
+        </div>
+
+        <div class="sub" style="margin-top:8px">Daily rate × trip length.</div>
+
+        <div class="row" style="margin-top:12px">
+          <input class="input" id="start" placeholder="Start YYYY-MM-DD"/>
+          <input class="input" id="end" placeholder="End YYYY-MM-DD"/>
+        </div>
+
+        <div class="card section" style="margin-top:12px; box-shadow:none">
+          <div class="sub">Quote</div>
+          <div id="quote" style="font-weight:950;margin-top:6px">—</div>
+        </div>
+
+        <div class="row" style="margin-top:12px">
+          <button class="btn" id="bookBtn">Book</button>
+          <button class="btnOutline" id="cancelBtn">Cancel</button>
+        </div>
+
+        <div class="card section" style="margin-top:12px; box-shadow:none">
+          <div style="font-weight:950;">Payment (simulated)</div>
+          <div class="sub" style="margin-top:6px">Pay to confirm booking.</div>
+          <div class="row" style="margin-top:12px">
+            <input class="input" id="bookingId" placeholder="booking id"/>
+            <button class="btnOutline" id="payBtn">Pay</button>
+          </div>
+          <pre id="out" style="margin-top:10px"></pre>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <script type="module">
+    import { apiGet, apiPost, money, daysBetween, addDays, toISODate, readQueryParams, showToast, carPhotoUrl } from "./ui.js";
+
+    const qp = readQueryParams();
+    const carId = qp.id;
+
+    const bookingIdEl = document.getElementById('bookingId');
+
+    try{
+      const raw = localStorage.getItem('ds_prefill_booking');
+      if(raw){
+        const obj = JSON.parse(raw);
+
+        if(String(obj.carId) === String(carId)){
+          bookingIdEl.value = obj.bookingId;
+          localStorage.removeItem('ds_prefill_booking');
+          showToast('Booking ready to pay', `Booking #${obj.bookingId}`);
+        }
+      }
+    }catch(e){}
+
+    const carTitle = document.getElementById('carTitle');
+    const carMeta = document.getElementById('carMeta');
+    const hostName = document.getElementById('hostName');
+    const msgOwner = document.getElementById('msgOwner');
+    const meInfo = document.getElementById('meInfo');
+
+    const pricePill = document.getElementById('pricePill');
+    const quote = document.getElementById('quote');
+    const out = document.getElementById('out');
+    const watchOut = document.getElementById('watchOut');
+
+    const ownerTools = document.getElementById('ownerTools');
+    const blocksList = document.getElementById('blocksList');
+    const calendar = document.getElementById('calendar');
+
+    const startEl = document.getElementById('start');
+    const endEl = document.getElementById('end');
+    const wStartEl = document.getElementById('watchStart');
+    const wEndEl = document.getElementById('watchEnd');
+
+    // Prefill dates if renter came from search
+    if(qp.start) startEl.value = qp.start;
+    if(qp.end) endEl.value = qp.end;
+    if(qp.start) wStartEl.value = qp.start;
+    if(qp.end) wEndEl.value = qp.end;
+
+    let car = null;
+    let me = null;
+
+    async function loadMe(){
+      const r = await apiGet('/api/auth/me');
+      me = r.ok ? r.user : null;
+      meInfo.textContent = me ? `You are logged in as ${me.display_name}.` : 'You are not logged in.';
+    }
+    await loadMe();
+
+    async function loadCar(){
+      const r = await apiGet('/api/cars/' + carId);
+      if(!r.ok){ carTitle.textContent = 'Car not found'; return; }
+      car = r.car;
+      const hero = document.getElementById("heroImg");
+      hero.src = carPhotoUrl(car, 1200, 800);
+      hero.onerror = () => { hero.style.display = "none"; };
+
+      carTitle.textContent = car.title || `${car.year} ${car.make} ${car.model}`;
+      carMeta.textContent = `${car.year} ${car.make} ${car.model} • ${car.mileage} miles • ${car.pickup_location}`;
+      hostName.textContent = car.owner_name;
+      pricePill.textContent = money(car.price_per_day_cents) + '/day';
+
+      msgOwner.href = `/messages.html?carId=${car.id}&other=${car.owner_id}`;
+
+      if(me && me.id === car.owner_id){
+        ownerTools.style.display = 'block';
+      }
+    }
+    await loadCar();
+
+    function isDateInRange(day, start, end){
+      return day >= start && day < end;
+    }
+
+    async function loadCalendar(){
+      const r = await apiGet(`/api/cars/${carId}/calendar`);
+      if(!r.ok) return;
+
+      calendar.innerHTML = '';
+
+      const today = new Date();
+      const days = 30;
+
+      for(let i=0;i<days;i++){
+        const d = addDays(today, i);
+        const ds = toISODate(d);
+
+        let blocked = false;
+        for(const b of r.bookings){
+          if(isDateInRange(ds, b.start_date, b.end_date)){ blocked = true; break; }
+        }
+        if(!blocked){
+          for(const b of r.blocks){
+            if(isDateInRange(ds, b.start_date, b.end_date)){ blocked = true; break; }
+          }
+        }
+
+        const cell = document.createElement('div');
+        cell.className = 'calCell ' + (blocked ? 'calBlocked' : 'calAvailable');
+        cell.innerHTML = `<div class="calDay">${ds}</div><div class="calTag">${blocked ? 'Blocked' : 'Available'}</div>`;
+        calendar.appendChild(cell);
+      }
+
+      // Owner blocks list
+      if(ownerTools.style.display !== 'none'){
+        blocksList.innerHTML = '';
+        if(!r.blocks.length){
+          blocksList.innerHTML = '<div class="sub">No manual blocks.</div>';
+        }else{
+          for(const b of r.blocks){
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.innerHTML = `
+              <div class="section">
+                <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+                  <div style="font-weight:950;">Block #${b.id}</div>
+                  <div class="pill">${b.start_date} → ${b.end_date}</div>
+                </div>
+                <div class="sub" style="margin-top:6px">${b.reason || ''}</div>
+                <div class="row" style="margin-top:12px">
+                  <button class="btnDanger" data-bid="${b.id}">Delete</button>
+                </div>
+              </div>
+            `;
+            blocksList.appendChild(div);
+          }
+        }
+      }
+    }
+    await loadCalendar();
+
+    function updateQuote(){
+      if(!car) return;
+      const s = startEl.value;
+      const e = endEl.value;
+      if(!s || !e) { quote.textContent = '—'; return; }
+      const d = daysBetween(s,e);
+      quote.textContent = `${d} day(s) × ${money(car.price_per_day_cents)}/day = ${money(d * car.price_per_day_cents)}`;
+    }
+    startEl.addEventListener('input', updateQuote);
+    endEl.addEventListener('input', updateQuote);
+    updateQuote();
+
+    document.getElementById('bookBtn').addEventListener('click', async () => {
+      if(!car) return;
+      const s = startEl.value;
+      const e = endEl.value;
+
+      const r = await apiPost('/api/bookings', {carId:Number(carId), startDate:s, endDate:e});
+      out.textContent = JSON.stringify(r,null,2);
+      if(r.ok){
+        document.getElementById('bookingId').value = r.bookingId;
+        showToast('Booking created', `Booking #${r.bookingId}`);
+        await loadCalendar();
+      }else{
+        showToast('Booking failed', r.error || 'Try different dates');
+      }
+    });
+
+    document.getElementById('payBtn').addEventListener('click', async () => {
+      const bookingId = document.getElementById('bookingId').value;
+      const r = await apiPost(`/api/bookings/${bookingId}/pay`, {});
+      out.textContent = JSON.stringify(r,null,2);
+      if(r.ok) showToast('Payment successful', `Booking #${bookingId} confirmed`);
+      else showToast('Payment failed', r.error || '');
+    });
+
+    document.getElementById('cancelBtn').addEventListener('click', async () => {
+      const bookingId = document.getElementById('bookingId').value;
+      const r = await apiPost(`/api/bookings/${bookingId}/cancel`, {});
+      out.textContent = JSON.stringify(r,null,2);
+      if(r.ok) showToast('Booking cancelled', `Booking #${bookingId}`);
+      else showToast('Cancel failed', r.error || '');
+      await loadCalendar();
+    });
+
+    document.getElementById('watchBtn').addEventListener('click', async () => {
+      const max = document.getElementById('watchMax').value;
+      const ws = wStartEl.value;
+      const we = wEndEl.value;
+      const r = await apiPost(`/api/cars/${carId}/watch`, { maxPricePerDay: max, watchStartDate: ws, watchEndDate: we });
+      watchOut.style.display = 'block';
+      watchOut.textContent = JSON.stringify(r,null,2);
+      if(r.ok) showToast('Watch saved', 'We will notify you when conditions match');
+      else showToast('Watch failed', r.error || '');
+    });
+
+    document.getElementById('reloadCalBtn').addEventListener('click', async () => {
+      await loadCalendar();
+      showToast('Calendar refreshed');
+    });
+
+    document.getElementById('addBlockBtn').addEventListener('click', async () => {
+      const s = document.getElementById('blkStart').value;
+      const e = document.getElementById('blkEnd').value;
+      const reason = document.getElementById('blkReason').value;
+      const r = await apiPost(`/api/cars/${carId}/blocks`, {startDate:s, endDate:e, reason});
+      if(r.ok) showToast('Block added');
+      else showToast('Block failed', r.error || '');
+      await loadCalendar();
+    });
+
+    blocksList.addEventListener('click', async (e) => {
+      const btn = e.target.closest('button[data-bid]');
+      if(!btn) return;
+      const bid = btn.dataset.bid;
+      const r = await apiPost(`/api/cars/${carId}/blocks/${bid}/delete`, {});
+      if(r.ok) showToast('Block removed');
+      else showToast('Delete failed', r.error || '');
+      await loadCalendar();
+    });
+  </script>
+</body>
+</html>

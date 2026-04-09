@@ -1,0 +1,255 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Search - DriveShare</title>
+  <link rel="stylesheet" href="/style.css"/>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbarInner">
+      <a class="brand" href="/"><span class="logoDot"></span>DriveShare</a>
+      <div class="navLinks">
+        <a href="/owner.html">Owner</a>
+        <a href="/notifications.html">Notifications</a>
+        <a href="/messages.html">Messages</a>
+      </div>
+    </div>
+  </div>
+
+  <main class="wrap">
+    <div class="card section">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+        <div>
+          <h1 style="font-size:22px;font-weight:950;">Search</h1>
+          <div class="sub">Location + dates are required. Max price is optional.</div>
+        </div>
+        <div class="pill" id="mePill">Not logged in</div>
+      </div>
+
+      <div class="searchBar" style="margin-top:14px">
+        <input class="input" id="location" placeholder="Pickup location" />
+        <input class="input" id="start" placeholder="Start YYYY-MM-DD" />
+        <input class="input" id="end" placeholder="End YYYY-MM-DD" />
+        <input class="input" id="maxPrice" placeholder="Max $/day (optional)" />
+        <button class="btn" id="searchBtn">Search</button>
+      </div>
+    </div>
+
+    <div class="resultsLayout">
+      <aside class="card section sidebar">
+        <h3>Filters</h3>
+
+        <div class="field">
+          <div class="label">Sort</div>
+          <select class="select" id="sort">
+            <option value="priceAsc">Price: low to high</option>
+            <option value="priceDesc">Price: high to low</option>
+            <option value="mileageAsc">Mileage: low to high</option>
+            <option value="yearDesc">Year: newest first</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <div class="label">Quick actions</div>
+          <div class="row" style="margin-top:8px">
+            <a class="btnOutline" href="/login.html" style="text-decoration:none;display:inline-flex;align-items:center;">Login</a>
+            <a class="btnOutline" href="/register.html" style="text-decoration:none;display:inline-flex;align-items:center;">Register</a>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="label">Tip</div>
+          <div class="sub">Click a car to see details, watch rules, calendar, and booking box.</div>
+        </div>
+      </aside>
+
+      <section>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div class="sub" id="countText">0 cars</div>
+        </div>
+
+        <div id="resultsGrid" class="gridCars"></div>
+      </section>
+    </div>
+  </main>
+
+  <script type="module">
+    import { apiGet, money, readQueryParams, setQueryParams, showToast, carPhotoUrl } from "./ui.js";
+
+    // Mediator: this object coordinates UI components so they don't call each other directly.
+    class SearchMediator{
+      constructor(){
+        this.locEl = document.getElementById('location');
+        this.startEl = document.getElementById('start');
+        this.endEl = document.getElementById('end');
+        this.maxEl = document.getElementById('maxPrice');
+        this.searchBtn = document.getElementById('searchBtn');
+
+        this.sortEl = document.getElementById('sort');
+        this.grid = document.getElementById('resultsGrid');
+        this.countText = document.getElementById('countText');
+        this.mePill = document.getElementById('mePill');
+
+        this.lastCars = [];
+
+        this.searchBtn.addEventListener('click', ()=> this.search(true));
+        this.sortEl.addEventListener('change', ()=> this.render());
+
+        // Book button click (event delegation)
+        this.grid.addEventListener('click', (e)=> this.handleGridClick(e));
+      }
+
+      async initFromQuery(){
+        const q = readQueryParams();
+        this.locEl.value = q.location || '';
+        this.startEl.value = q.start || '';
+        this.endEl.value = q.end || '';
+        this.maxEl.value = q.maxPrice || '';
+
+        const me = await apiGet('/api/auth/me');
+        this.mePill.textContent = me.ok ? ('Logged in: ' + me.user.display_name) : 'Not logged in';
+
+        if(this.locEl.value && this.startEl.value && this.endEl.value){
+          await this.search(false);
+        }
+      }
+
+      sortCars(){
+        const v = this.sortEl.value;
+        const out = [...this.lastCars];
+        if(v === 'priceAsc') out.sort((a,b)=>a.price_per_day_cents-b.price_per_day_cents);
+        if(v === 'priceDesc') out.sort((a,b)=>b.price_per_day_cents-a.price_per_day_cents);
+        if(v === 'mileageAsc') out.sort((a,b)=>a.mileage-b.mileage);
+        if(v === 'yearDesc') out.sort((a,b)=>b.year-a.year);
+        return out;
+      }
+
+      buildBadges(c){
+        const badges = [];
+        if(Number(c.mileage) <= 30000) badges.push('Low miles');
+        if(Number(c.year) >= 2020) badges.push('Newer');
+        if(Number(c.price_per_day_cents) <= 6000) badges.push('Budget');
+        return badges;
+      }
+
+      render(){
+        const cars = this.sortCars();
+        this.grid.innerHTML = '';
+        this.countText.textContent = cars.length + (cars.length === 1 ? ' car' : ' cars');
+
+        if(!cars.length){
+          this.grid.innerHTML = '<div class="sub">No cars found for that search.</div>';
+          return;
+        }
+
+        const s = this.startEl.value.trim();
+        const e = this.endEl.value.trim();
+
+        for(const c of cars){
+          // estimate total based on chosen dates
+          let estHtml = '';
+          if(s && e && !Number.isNaN(Date.parse(s)) && !Number.isNaN(Date.parse(e))){
+            const d = daysBetween(s,e);
+            const total = d * Number(c.price_per_day_cents);
+            estHtml = `<div class="sub">${money(total)} total</div>`;
+          }
+
+          const badges = this.buildBadges(c);
+          const badgeHtml = badges.length
+            ? `<div class="badgeRow">${badges.map(b => `<span class="badgeSm">${b}</span>`).join('')}</div>`
+            : '';
+
+          const card = document.createElement('div');
+          card.className = 'card carCard';
+          card.innerHTML = `
+            <div class="carImg">
+              <img src="${carPhotoUrl(c, 600, 400)}" alt="${c.year} ${c.make} ${c.model}">
+            </div>
+            <div class="carBody">
+              <div class="carTitle">${c.year} ${c.make} ${c.model}</div>
+              <div class="carMeta">${c.pickup_location} • ${c.mileage} miles</div>
+
+              ${badgeHtml}
+
+              <div class="carBottom">
+                <div>
+                  <div class="price">${money(c.price_per_day_cents)}/day</div>
+                  ${estHtml}
+                </div>
+
+                <div class="rightActions">
+                  <a class="smallLink" href="/car.html?id=${c.id}&start=${encodeURIComponent(s)}&end=${encodeURIComponent(e)}">View</a>
+                  <button class="btnOutline btnSm" data-action="book" data-id="${c.id}">Book</button>
+                </div>
+              </div>
+            </div>
+          `;
+          this.grid.appendChild(card);
+        }
+      }
+
+      async handleGridClick(e){
+        const btn = e.target.closest('button[data-action="book"]');
+        if(!btn) return;
+
+        const carId = Number(btn.dataset.id);
+        const start = this.startEl.value.trim();
+        const end = this.endEl.value.trim();
+
+        if(!start || !end){
+          showToast('Missing dates', 'Pick start and end dates first');
+          return;
+        }
+
+        const r = await apiPost('/api/bookings', { carId, startDate: start, endDate: end });
+
+        if(r.ok){
+          showToast('Booking created', `Booking #${r.bookingId}`);
+
+          // store booking id so car page can prefill it
+          localStorage.setItem('ds_prefill_booking', JSON.stringify({ carId, bookingId: r.bookingId }));
+
+          // jump to details page (Turo-ish flow)
+          location.href = `/car.html?id=${carId}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
+        }else{
+          showToast('Booking failed', r.error || 'Try different dates');
+        }
+      }
+
+      async search(pushUrl=true){
+        const loc = this.locEl.value.trim();
+        const start = this.startEl.value.trim();
+        const end = this.endEl.value.trim();
+        const maxPrice = this.maxEl.value.trim();
+
+        if(!loc || !start || !end){
+          showToast('Missing search fields', 'Location, start, and end are required');
+          return;
+        }
+
+        if(pushUrl){
+          history.replaceState({}, '', setQueryParams('/renter.html', { location: loc, start, end, maxPrice }));
+        }
+
+        const params = new URLSearchParams({ location: loc, start, end });
+        if(maxPrice) params.set('maxPrice', maxPrice);
+
+        const r = await apiGet('/api/cars/search?' + params.toString());
+        if(!r.ok){
+          this.lastCars = [];
+          this.render();
+          showToast('Search error', r.error || 'Try again');
+          return;
+        }
+
+        this.lastCars = r.cars || [];
+        this.render();
+      }
+    }
+
+    const ui = new SearchMediator();
+    ui.initFromQuery();
+  </script>
+</body>
+</html>

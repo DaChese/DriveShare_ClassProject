@@ -1,0 +1,166 @@
+
+:root{
+  --bg:#f6f7fb;
+  --card:#ffffff;
+  --text:#111827;
+  --muted:#6b7280;
+  --line:#e5e7eb;
+  --accent:#10b981;
+  --accent2:#2563eb;
+  --danger:#ef4444;
+  --shadow: 0 10px 24px rgba(17,24,39,.08);
+}
+*{ box-sizing:border-box; }
+body{ margin:0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:var(--bg); color:var(--text); }
+a{ color:inherit; }
+.wrap{ max-width:1100px; margin:20px auto; padding:0 16px; }
+
+.topbar{ position:sticky; top:0; z-index:10; background:rgba(246,247,251,.92); backdrop-filter: blur(10px); border-bottom:1px solid var(--line); }
+.topbarInner{ max-width:1100px; margin:0 auto; padding:12px 16px; display:flex; gap:12px; align-items:center; justify-content:space-between; }
+
+.brand{ display:flex; align-items:center; gap:10px; font-weight:900; letter-spacing:.2px; text-decoration:none; }
+.logoDot{ width:12px; height:12px; border-radius:999px; background:var(--accent); box-shadow:0 0 0 6px rgba(16,185,129,.12); }
+
+.navLinks{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.navLinks a{ text-decoration:none; color:var(--muted); font-weight:800; padding:8px 10px; border-radius:10px; }
+.navLinks a:hover{ background:#fff; color:var(--text); border:1px solid var(--line); }
+
+.sub{ color:var(--muted); }
+.card{ background:var(--card); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); }
+.section{ margin-top:14px; padding:16px; }
+.row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+
+.input{ height:42px; border-radius:12px; border:1px solid var(--line); padding:0 12px; background:#fff; min-width:180px; }
+.select{ height:42px; border-radius:12px; border:1px solid var(--line); padding:0 10px; background:#fff; }
+
+.btn{ height:42px; border-radius:12px; border:1px solid var(--line); background:var(--accent2); color:#fff; font-weight:900; padding:0 14px; cursor:pointer; }
+.btn:active{ transform: translateY(1px); }
+.btnOutline{ height:42px; border-radius:12px; border:1px solid var(--line); background:#fff; color:var(--text); font-weight:900; padding:0 14px; cursor:pointer; }
+.btnDanger{ height:42px; border-radius:12px; border:1px solid rgba(239,68,68,.35); background:var(--danger); color:#fff; font-weight:900; padding:0 14px; cursor:pointer; }
+
+.pill{ border:1px solid var(--line); border-radius:999px; padding:6px 10px; font-weight:900; color:var(--muted); background:#fff; }
+
+/* Home hero */
+.hero{ padding:26px 18px; display:grid; grid-template-columns:1.2fr .8fr; gap:16px; }
+.heroTitle{ font-size:34px; font-weight:950; letter-spacing:-0.6px; }
+.heroRight{ border-left:1px solid var(--line); padding-left:16px; }
+@media(max-width:900px){ .hero{grid-template-columns:1fr;} .heroRight{border-left:none; padding-left:0; border-top:1px solid var(--line); padding-top:16px;} }
+
+.searchBar{ display:grid; grid-template-columns:1.2fr .9fr .9fr .6fr auto; gap:10px; margin-top:12px; }
+@media(max-width:900px){ .searchBar{ grid-template-columns:1fr; } }
+
+/* Results */
+.resultsLayout{ display:grid; grid-template-columns:320px 1fr; gap:14px; align-items:start; margin-top:14px; }
+@media(max-width:900px){ .resultsLayout{ grid-template-columns:1fr; } }
+.sidebar{ position:sticky; top:74px; }
+.sidebar h3{ margin:0 0 10px; font-size:14px; color:var(--muted); letter-spacing:.2px; }
+.field{ margin-top:10px; }
+.label{ font-size:12px; font-weight:900; color:var(--muted); margin-bottom:6px; }
+.gridCars{ display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:12px; }
+
+/* Card */
+.carCard{ overflow:hidden; }
+.carImg{ height:150px; background:linear-gradient(135deg, rgba(37,99,235,.18), rgba(16,185,129,.18)); border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:center; color:var(--muted); font-weight:900; }
+.carBody{ padding:14px; }
+.carTitle{ font-weight:950; margin-bottom:6px; }
+.carMeta{ color:var(--muted); font-size:13px; }
+.carBottom{ margin-top:12px; display:flex; justify-content:space-between; align-items:center; }
+.price{ font-weight:950; }
+.smallLink{ text-decoration:none; font-weight:950; color:var(--accent2); }
+
+.carImg, .gallery{
+  position: relative;
+  overflow: hidden;
+}
+
+.carImg img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.gallery img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* extra car-card UPDATE */
+.badgeRow{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+.badgeSm{
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--muted);
+  background: #fff;
+}
+.rightActions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+.btnSm{
+  height:34px;
+  padding:0 12px;
+  border-radius:12px;
+  font-size:13px;
+}
+
+/* Details */
+.detailLayout{ display:grid; grid-template-columns:1.35fr .65fr; gap:14px; margin-top:14px; }
+@media(max-width:900px){ .detailLayout{ grid-template-columns:1fr; } }
+.gallery{ height:240px; border-radius:16px; border:1px solid var(--line); background:linear-gradient(135deg, rgba(37,99,235,.14), rgba(16,185,129,.14)); display:flex; align-items:center; justify-content:center; color:var(--muted); font-weight:950; }
+.stickyCard{ position:sticky; top:74px; }
+
+/* Calendar */
+.calGrid{ display:grid; grid-template-columns:repeat(7,1fr); gap:8px; margin-top:10px; }
+.calCell{ padding:10px; border-radius:12px; border:1px solid var(--line); background:#fff; }
+.calDay{ font-weight:900; font-size:12px; }
+.calTag{ margin-top:6px; font-size:12px; color:var(--muted); }
+.calBlocked{ border-color: rgba(239,68,68,.45); }
+.calAvailable{ border-color: rgba(16,185,129,.45); }
+
+/* Messages */
+.msgBox{ display:flex; flex-direction:column; gap:10px; max-height:380px; overflow:auto; }
+.msgRow{ display:flex; }
+.msgBubble{ max-width:70%; padding:10px 12px; border-radius:14px; border:1px solid var(--line); background:#fff; }
+.msgMine{ justify-content:flex-end; }
+.msgMine .msgBubble{ background: rgba(37,99,235,.08); }
+.msgMeta{ color:var(--muted); font-size:12px; margin-top:6px; }
+
+
+/* Toast */
+.toast{
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  max-width: 360px;
+  background: #111827;
+  color: white;
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 18px 40px rgba(0,0,0,.25);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity .18s ease, transform .18s ease;
+  pointer-events: none;
+  z-index: 999;
+}
+.toastShow{
+  opacity: 1;
+  transform: translateY(0);
+}
+.toastSub{
+  color: rgba(255,255,255,.75);
+  font-size: 12px;
+  margin-top: 4px;
+}

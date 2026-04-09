@@ -1,0 +1,37 @@
+<!doctype html>
+<html><head><meta charset="utf-8"/><title>Password Recovery</title><link rel="stylesheet" href="/style.css"/></head>
+<body>
+  <div class="topbar">
+    <div class="topbarInner">
+      <a class="brand" href="/"><span class="logoDot"></span>DriveShare</a>
+      <div class="navLinks">
+        <a href="/renter.html">Search</a>
+        <a href="/owner.html">Owner</a>
+        <a href="/notifications.html">Notifications</a>
+      </div>
+    </div>
+  </div>
+  <main class="wrap">
+<div class="card section">
+  <h1 style="font-size:22px;font-weight:950;">Password recovery</h1>
+  <div class="sub">Answer the 3 questions in order, then reset your password.</div>
+  <div class="row" style="margin-top:14px">
+    <input class="input" id="email" placeholder="email" style="min-width:260px" />
+    <input class="input" id="ans1" placeholder="Answer 1" />
+    <input class="input" id="ans2" placeholder="Answer 2" />
+    <input class="input" id="ans3" placeholder="Answer 3" />
+    <input class="input" id="newpw" placeholder="new password" type="password" />
+    <button class="btn" id="go">Verify + reset</button>
+  </div>
+  <pre id="out" style="margin-top:12px"></pre>
+</div>
+</main>
+  <script type="module">
+import { apiPost } from "./ui.js";
+const out = document.getElementById('out');
+document.getElementById('go').addEventListener('click', async () => {
+  const payload = { email: email.value, answers: {1: ans1.value, 2: ans2.value, 3: ans3.value}, newPassword: newpw.value };
+  out.textContent = JSON.stringify(await apiPost('/api/auth/recover', payload), null, 2);
+});
+</script>
+</body></html>

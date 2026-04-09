@@ -1,0 +1,104 @@
+<!doctype html><html><head><meta charset="utf-8"/><title>Owner</title><link rel="stylesheet" href="/style.css"/></head>
+<body><main class="wrap"><h1>Owner Dashboard</h1>
+
+<div class="box">
+  <div class="sub">Create listing (Builder)</div>
+  <div class="row">
+    <input id="title" placeholder="title"/>
+    <input id="make" placeholder="make"/>
+    <input id="model" placeholder="model"/>
+    <input id="year" placeholder="year"/>
+    <input id="mileage" placeholder="mileage"/>
+    <input id="loc" placeholder="pickup location"/>
+    <input id="price" placeholder="price/day"/>
+    <button id="create">Create</button>
+    <button id="loadMine">Load My Cars</button>
+    <a class="card" href="/">Back</a>
+  </div>
+  <pre id="out"></pre>
+</div>
+
+<div class="box">
+  <div class="sub">My Cars (edit price / active)</div>
+  <div id="myCars" class="carGrid"></div>
+</div>
+
+<div class="box">
+  <div class="sub">Messages (for demo)</div>
+  <div class="row">
+    <input id="msgCarId" placeholder="car id" />
+    <input id="msgRenterId" placeholder="renter user id" />
+    <a class="smallLink" id="openMsg" href="/messages.html">Open Messages</a>
+  </div>
+</div>
+
+</main>
+<script type="module">
+const out=document.getElementById('out');
+const myCars=document.getElementById('myCars');
+
+async function get(url){ const r=await fetch(url); return r.json(); }
+async function post(url,body){
+  const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});
+  return r.json();
+}
+function money(cents){ return '$' + (cents/100).toFixed(2); }
+
+function renderMine(cars){
+  myCars.innerHTML = '';
+  for(const c of cars){
+    const div=document.createElement('div');
+    div.className='carCard';
+    div.innerHTML = `
+      <div class="carTop">
+        <div class="carTitle">${c.year} ${c.make} ${c.model}</div>
+        <div class="badge">${c.active ? 'Active' : 'Hidden'}</div>
+      </div>
+      <div class="carMeta">${c.pickup_location} • ${money(c.price_per_day_cents)}/day • ${c.mileage} miles</div>
+      <div class="row" style="margin-top:10px">
+        <input class="small" data-id="${c.id}" placeholder="new price/day" />
+        <button class="smallBtn" data-action="price" data-id="${c.id}">Update Price</button>
+        <button class="smallBtn" data-action="toggle" data-id="${c.id}">${c.active ? 'Disable' : 'Enable'}</button>
+        <a class="smallLink" href="/car.html?id=${c.id}">View</a>
+      </div>
+    `;
+    myCars.appendChild(div);
+  }
+}
+
+document.getElementById('create').onclick=async()=>{
+  const payload={title:title.value,make:make.value,model:model.value,year:Number(year.value),mileage:Number(mileage.value),
+    pickupLocation:loc.value,pricePerDay:Number(price.value)};
+  out.textContent=JSON.stringify(await post('/api/cars',payload),null,2);
+};
+
+document.getElementById('loadMine').onclick=async()=>{
+  const r = await get('/api/cars/mine/list');
+  out.textContent = JSON.stringify(r,null,2);
+  if(r.ok) renderMine(r.cars);
+};
+
+myCars.addEventListener('click', async (e) => {
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  const id = btn.dataset.id;
+  const action = btn.dataset.action;
+  if(action === 'price'){
+    const input = myCars.querySelector(`input[data-id="${id}"]`);
+    const val = Number(input.value);
+    out.textContent = JSON.stringify(await post(`/api/cars/${id}/price`, {pricePerDay: val}), null, 2);
+  } else if(action === 'toggle'){
+    const makeActive = btn.textContent.trim() === 'Enable';
+    out.textContent = JSON.stringify(await post(`/api/cars/${id}/active`, {active: makeActive}), null, 2);
+  }
+});
+
+document.getElementById('msgCarId').addEventListener('input', updateLink);
+document.getElementById('msgRenterId').addEventListener('input', updateLink);
+function updateLink(){
+  const c = document.getElementById('msgCarId').value;
+  const rId = document.getElementById('msgRenterId').value;
+  document.getElementById('openMsg').href = `/messages.html?carId=${c}&other=${rId}`;
+}
+updateLink();
+</script></body></html>
