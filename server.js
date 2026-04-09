@@ -12,6 +12,7 @@ import notificationRoutes from "./src/routes/notifications.js";
 import messageRoutes from "./src/routes/messages.js";
 import userRoutes from "./src/routes/users.js";
 import photoRoutes from "./src/routes/photos.js";
+import devSeedRoutes from "./src/routes/devSeed.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,6 +33,7 @@ app.use("/api/bookings", bookingRoutes(db));
 app.use("/api/notifications", notificationRoutes(db));
 app.use("/api/messages", messageRoutes(db));
 app.use("/api/photos", photoRoutes());
+app.use("/api/dev", devSeedRoutes(db));
 
 const PORT = 3000;
 app.listen(PORT, () => console.log(`DriveShare running at http://localhost:${PORT}`));

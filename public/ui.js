@@ -10,22 +10,18 @@ export function readQueryParams() {
 export function setQueryParams(basePath, params = {}) {
   const url = new URL(basePath, location.origin);
 
-  Object.entries(params).forEach(([k, v]) => {
-    if (v == null) return;
+  for (const [k, v] of Object.entries(params)) {
+    if (v == null) continue;
     const s = String(v).trim();
-    if (s === "") return;
+    if (s === "") continue;
     url.searchParams.set(k, s);
-  });
+  }
 
   return url.pathname + (url.search ? url.search : "");
 }
 
 async function safeJson(res) {
-  try {
-    return await res.json();
-  } catch {
-    return null;
-  }
+  try { return await res.json(); } catch { return null; }
 }
 
 export async function apiGet(path) {
@@ -40,7 +36,6 @@ export async function apiGet(path) {
         status: res.status,
       };
     }
-
     return data || { ok: true };
   } catch {
     return { ok: false, error: "Network error." };
@@ -65,7 +60,6 @@ export async function apiPost(path, body) {
         status: res.status,
       };
     }
-
     return data || { ok: true };
   } catch {
     return { ok: false, error: "Network error." };
@@ -108,7 +102,7 @@ export function addDaysISO(isoDate, n) {
   return toISODate(d);
 }
 
-// Toast helper
+// toast
 let _toastTimer = null;
 
 export function showToast(title, sub = "") {
@@ -137,7 +131,7 @@ function escapeHtml(s) {
     .replaceAll(">", "&gt;");
 }
 
-// Unsplash helper (calls your backend proxy)
+// Unsplash (backend proxy)
 export async function getUnsplashPhotoForCar(car) {
   const q = `${car.year} ${car.make} ${car.model} car`;
   const r = await apiGet(`/api/photos/unsplash?query=${encodeURIComponent(q)}`);

@@ -4,15 +4,26 @@ import CarListingBuilder from "../patterns/CarListingBuilder.js";
 import { notifyWatchers } from "../patterns/WatchNotifier.js";
 import { listBlocksAndBookings } from "../services/availability.js";
 
+function normalizeISODate(s) {
+  const t = String(s || "").trim();
+  // Accept "YYYY-MM-DD" or "YYYY-MM-DDTHH:MM:SS..." and keep just the date part
+  if (t.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(t)) return t.slice(0, 10);
+  return t;
+}
+
 function isValidISODate(s) {
-  // super basic YYYY-MM-DD check + Date.parse sanity
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(s || ""))) return false;
-  return !Number.isNaN(Date.parse(s));
+  const d = normalizeISODate(s);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
+  return !Number.isNaN(Date.parse(d));
 }
 
 function overlaps(aStart, aEnd, bStart, bEnd) {
+  const as = normalizeISODate(aStart);
+  const ae = normalizeISODate(aEnd);
+  const bs = normalizeISODate(bStart);
+  const be = normalizeISODate(bEnd);
   // same logic you used in SQL: (start < otherEnd) && (end > otherStart)
-  return String(aStart) < String(bEnd) && String(aEnd) > String(bStart);
+  return as < be && ae > bs;
 }
 
 function toCentsFromDollars(v) {
@@ -71,8 +82,8 @@ export default function carRoutes(db) {
   r.get("/search", async (req, res) => {
     const { location, start, end, maxPrice } = req.query || {};
     const loc = String(location || "").trim();
-    const startDate = String(start || "").trim();
-    const endDate = String(end || "").trim();
+    const startDate = normalizeISODate(start);
+    const endDate = normalizeISODate(end);
 
     if (!loc || !startDate || !endDate) {
       return res.status(400).json({ ok: false, error: "Need location, start, end." });
@@ -174,8 +185,8 @@ export default function carRoutes(db) {
     if (!car) return res.status(404).json({ ok: false, error: "Car not found." });
     if (car.owner_id !== req.userId) return res.status(403).json({ ok: false, error: "Not owner." });
 
-    const s = String(startDate || "").trim();
-    const e = String(endDate || "").trim();
+    const s = normalizeISODate(startDate);
+    const e = normalizeISODate(endDate);
     if (!s || !e) return res.status(400).json({ ok: false, error: "Need startDate and endDate." });
     if (!isValidISODate(s) || !isValidISODate(e)) {
       return res.status(400).json({ ok: false, error: "Dates must be YYYY-MM-DD." });
@@ -326,8 +337,8 @@ export default function carRoutes(db) {
       return res.status(400).json({ ok: false, error: "Invalid maxPricePerDay." });
     }
 
-    const ws = watchStartDate && String(watchStartDate).trim() !== "" ? String(watchStartDate).trim() : null;
-    const we = watchEndDate && String(watchEndDate).trim() !== "" ? String(watchEndDate).trim() : null;
+    const ws = watchStartDate && String(watchStartDate).trim() !== "" ? normalizeISODate(watchStartDate) : null;
+    const we = watchEndDate && String(watchEndDate).trim() !== "" ? normalizeISODate(watchEndDate) : null;
 
     if (ws && !isValidISODate(ws)) return res.status(400).json({ ok: false, error: "Invalid watchStartDate." });
     if (we && !isValidISODate(we)) return res.status(400).json({ ok: false, error: "Invalid watchEndDate." });
