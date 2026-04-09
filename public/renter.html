@@ -27,11 +27,17 @@
         <div class="pill" id="mePill">Not logged in</div>
       </div>
 
-      <div class="searchBar" style="margin-top:14px">
+      <div class="searchBar searchBarWide" style="margin-top:14px">
         <input class="input" id="location" placeholder="Pickup location" />
-        <input class="input" id="start" placeholder="Start YYYY-MM-DD" />
-        <input class="input" id="end" placeholder="End YYYY-MM-DD" />
-        <input class="input" id="maxPrice" placeholder="Max $/day (optional)" />
+        <input class="input" id="start" type="date" />
+        <input class="input" id="end" type="date" />
+
+        <div class="rangeWrap">
+          <input class="range" id="maxPrice" type="range" min="20" max="300" step="5" value="300" />
+          <input class="input" id="maxPriceNum" type="number" min="20" max="300" step="5" placeholder="Any" style="width:110px" />
+          <div class="pill" id="maxPriceText">Any price</div>
+        </div>
+
         <button class="btn" id="searchBtn">Search</button>
       </div>
     </div>
@@ -60,7 +66,7 @@
 
         <div class="field">
           <div class="label">Tip</div>
-          <div class="sub">Click a car to see details, watch rules, calendar, and booking box.</div>
+          <div class="sub">Click any card to open the car details page.</div>
         </div>
       </aside>
 
@@ -75,15 +81,23 @@
   </main>
 
   <script type="module">
-    import { apiGet, money, readQueryParams, setQueryParams, showToast, carPhotoUrl } from "./ui.js";
+    import {
+      apiGet, money, daysBetween,
+      readQueryParams, setQueryParams, showToast,
+      todayISO, addDaysISO,
+      getUnsplashPhotoForCar
+    } from "./ui.js";
 
-    // Mediator: this object coordinates UI components so they don't call each other directly.
     class SearchMediator{
       constructor(){
         this.locEl = document.getElementById('location');
         this.startEl = document.getElementById('start');
         this.endEl = document.getElementById('end');
+
         this.maxEl = document.getElementById('maxPrice');
+        this.maxNumEl = document.getElementById('maxPriceNum');
+        this.maxText = document.getElementById('maxPriceText');
+
         this.searchBtn = document.getElementById('searchBtn');
 
         this.sortEl = document.getElementById('sort');
@@ -96,21 +110,94 @@
         this.searchBtn.addEventListener('click', ()=> this.search(true));
         this.sortEl.addEventListener('change', ()=> this.render());
 
-        // Book button click (event delegation)
-        this.grid.addEventListener('click', (e)=> this.handleGridClick(e));
+        this.maxEl.addEventListener('input', ()=> this.setFromRange());
+        this.maxNumEl.addEventListener('input', ()=> this.setFromNumber());
+        this.startEl.addEventListener('change', ()=> this.syncEndMin());
+      }
+
+      setFromRange(){
+        const v = Number(this.maxEl.value);
+        const max = Number(this.maxEl.max);
+
+        if(v >= max){
+          this.maxNumEl.value = "";
+          this.maxText.textContent = "Any price";
+        }else{
+          this.maxNumEl.value = String(v);
+          this.maxText.textContent = `Max $${v}/day`;
+        }
+      }
+
+      setFromNumber(){
+        const raw = this.maxNumEl.value.trim();
+        const max = Number(this.maxEl.max);
+
+        if(raw === ""){
+          this.maxEl.value = String(max);
+          this.maxText.textContent = "Any price";
+          return;
+        }
+
+        let v = Number(raw);
+        if(!Number.isFinite(v)) v = max;
+        v = Math.max(Number(this.maxEl.min), Math.min(max, v));
+
+        this.maxEl.value = String(v);
+
+        if(v >= max){
+          this.maxNumEl.value = "";
+          this.maxText.textContent = "Any price";
+        }else{
+          this.maxText.textContent = `Max $${v}/day`;
+        }
+      }
+
+      getMaxPriceParam(){
+        const raw = this.maxNumEl.value.trim();
+        if(raw === "") return "";
+        const v = Number(raw);
+        if(!Number.isFinite(v)) return "";
+        if(v >= Number(this.maxEl.max)) return "";
+        return String(v);
+      }
+
+      syncEndMin(){
+        const s = this.startEl.value;
+        if(s) this.endEl.min = s;
+        if(this.endEl.value && this.endEl.value < this.endEl.min){
+          this.endEl.value = this.endEl.min;
+        }
       }
 
       async initFromQuery(){
         const q = readQueryParams();
         this.locEl.value = q.location || '';
-        this.startEl.value = q.start || '';
-        this.endEl.value = q.end || '';
-        this.maxEl.value = q.maxPrice || '';
+
+        // default dates so users don’t have to type
+        const t = todayISO();
+        this.startEl.min = t;
+        this.endEl.min = t;
+
+        this.startEl.value = q.start || addDaysISO(t, 1);
+        this.endEl.value = q.end || addDaysISO(this.startEl.value, 2);
+        this.syncEndMin();
+
+        if(q.maxPrice){
+          const v = Math.max(Number(this.maxEl.min), Math.min(Number(this.maxEl.max), Number(q.maxPrice)));
+          if(Number.isFinite(v)){
+            this.maxEl.value = String(v);
+            this.maxNumEl.value = String(v);
+          }
+        }else{
+          this.maxEl.value = String(this.maxEl.max);
+          this.maxNumEl.value = "";
+        }
+        this.setFromRange();
 
         const me = await apiGet('/api/auth/me');
         this.mePill.textContent = me.ok ? ('Logged in: ' + me.user.display_name) : 'Not logged in';
 
-        if(this.locEl.value && this.startEl.value && this.endEl.value){
+        if(this.locEl.value){
           await this.search(false);
         }
       }
@@ -123,14 +210,6 @@
         if(v === 'mileageAsc') out.sort((a,b)=>a.mileage-b.mileage);
         if(v === 'yearDesc') out.sort((a,b)=>b.year-a.year);
         return out;
-      }
-
-      buildBadges(c){
-        const badges = [];
-        if(Number(c.mileage) <= 30000) badges.push('Low miles');
-        if(Number(c.year) >= 2020) badges.push('Newer');
-        if(Number(c.price_per_day_cents) <= 6000) badges.push('Budget');
-        return badges;
       }
 
       render(){
@@ -147,73 +226,53 @@
         const e = this.endEl.value.trim();
 
         for(const c of cars){
-          // estimate total based on chosen dates
-          let estHtml = '';
-          if(s && e && !Number.isNaN(Date.parse(s)) && !Number.isNaN(Date.parse(e))){
-            const d = daysBetween(s,e);
-            const total = d * Number(c.price_per_day_cents);
-            estHtml = `<div class="sub">${money(total)} total</div>`;
-          }
-
-          const badges = this.buildBadges(c);
-          const badgeHtml = badges.length
-            ? `<div class="badgeRow">${badges.map(b => `<span class="badgeSm">${b}</span>`).join('')}</div>`
-            : '';
+          const d = (s && e) ? daysBetween(s,e) : 1;
+          const estTotal = d * Number(c.price_per_day_cents);
 
           const card = document.createElement('div');
-          card.className = 'card carCard';
+          card.className = 'card carCard clickCard';
+
           card.innerHTML = `
             <div class="carImg">
-              <img src="${carPhotoUrl(c, 600, 400)}" alt="${c.year} ${c.make} ${c.model}">
+              <img class="photo" alt="${c.year} ${c.make} ${c.model}"
+                src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" />
+              <div class="imgCredit" id="credit-${c.id}"></div>
             </div>
+
             <div class="carBody">
               <div class="carTitle">${c.year} ${c.make} ${c.model}</div>
               <div class="carMeta">${c.pickup_location} • ${c.mileage} miles</div>
 
-              ${badgeHtml}
-
               <div class="carBottom">
                 <div>
                   <div class="price">${money(c.price_per_day_cents)}/day</div>
-                  ${estHtml}
+                  <div class="sub">${money(estTotal)} total</div>
                 </div>
-
-                <div class="rightActions">
-                  <a class="smallLink" href="/car.html?id=${c.id}&start=${encodeURIComponent(s)}&end=${encodeURIComponent(e)}">View</a>
-                  <button class="btnOutline btnSm" data-action="book" data-id="${c.id}">Book</button>
-                </div>
+                <a class="smallLink" href="/car.html?id=${c.id}&start=${encodeURIComponent(s)}&end=${encodeURIComponent(e)}">View</a>
               </div>
             </div>
           `;
+
+          card.addEventListener('click', (ev) => {
+            if(ev.target.closest('a')) return;
+            location.href = `/car.html?id=${c.id}&start=${encodeURIComponent(s)}&end=${encodeURIComponent(e)}`;
+          });
+
           this.grid.appendChild(card);
-        }
-      }
 
-      async handleGridClick(e){
-        const btn = e.target.closest('button[data-action="book"]');
-        if(!btn) return;
+          const img = card.querySelector("img.photo");
+          const credit = card.querySelector(`#credit-${c.id}`);
 
-        const carId = Number(btn.dataset.id);
-        const start = this.startEl.value.trim();
-        const end = this.endEl.value.trim();
+          getUnsplashPhotoForCar(c).then((photo) => {
+            if(!photo || !photo.small) return;
 
-        if(!start || !end){
-          showToast('Missing dates', 'Pick start and end dates first');
-          return;
-        }
+            img.src = photo.small;
+            img.onload = () => img.classList.add("isLoaded");
 
-        const r = await apiPost('/api/bookings', { carId, startDate: start, endDate: end });
-
-        if(r.ok){
-          showToast('Booking created', `Booking #${r.bookingId}`);
-
-          // store booking id so car page can prefill it
-          localStorage.setItem('ds_prefill_booking', JSON.stringify({ carId, bookingId: r.bookingId }));
-
-          // jump to details page (Turo-ish flow)
-          location.href = `/car.html?id=${carId}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
-        }else{
-          showToast('Booking failed', r.error || 'Try different dates');
+            credit.innerHTML =
+              `Photo by <a href="${photo.photographerLink}" target="_blank" rel="noreferrer">${photo.photographerName}</a>
+               on <a href="${photo.unsplashLink}" target="_blank" rel="noreferrer">Unsplash</a>`;
+          }).catch(()=>{});
         }
       }
 
@@ -221,7 +280,7 @@
         const loc = this.locEl.value.trim();
         const start = this.startEl.value.trim();
         const end = this.endEl.value.trim();
-        const maxPrice = this.maxEl.value.trim();
+        const maxPriceParam = this.getMaxPriceParam();
 
         if(!loc || !start || !end){
           showToast('Missing search fields', 'Location, start, and end are required');
@@ -229,11 +288,13 @@
         }
 
         if(pushUrl){
-          history.replaceState({}, '', setQueryParams('/renter.html', { location: loc, start, end, maxPrice }));
+          history.replaceState({}, '', setQueryParams('/renter.html', {
+            location: loc, start, end, maxPrice: maxPriceParam
+          }));
         }
 
         const params = new URLSearchParams({ location: loc, start, end });
-        if(maxPrice) params.set('maxPrice', maxPrice);
+        if(maxPriceParam) params.set('maxPrice', maxPriceParam);
 
         const r = await apiGet('/api/cars/search?' + params.toString());
         if(!r.ok){

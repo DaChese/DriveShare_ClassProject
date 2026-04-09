@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html>
 <head>
@@ -25,19 +24,30 @@
       <div>
         <div class="heroTitle">Find the right car for your trip.</div>
         <div class="sub" style="margin-top:8px">
-          Class project version of a peer-to-peer car rental platform (Turo-style flow).
+          Pick a location + dates, then browse what’s available.
         </div>
 
-        <form id="heroForm" class="searchBar">
+        <div class="searchBar" style="margin-top:14px; align-items:center;">
           <input class="input" id="location" placeholder="Pickup location (ex: Detroit)" />
-          <input class="input" id="start" placeholder="Start date YYYY-MM-DD" />
-          <input class="input" id="end" placeholder="End date YYYY-MM-DD" />
-          <input class="input" id="maxPrice" placeholder="Max $/day (optional)" />
-          <button class="btn" type="submit">Search</button>
-        </form>
+
+          <input class="input" id="start" type="date" />
+          <input class="input" id="end" type="date" />
+
+          <div class="priceControls" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <input id="priceRange" type="range" min="0" max="300" step="5" style="width:180px"/>
+            <input class="input" id="priceNum" type="number" min="0" max="300" step="5" placeholder="Any" style="width:110px"/>
+            <div class="pill" id="priceLabel">Any price</div>
+          </div>
+
+          <button class="btn" id="searchBtn">Search</button>
+        </div>
 
         <div class="sub" style="margin-top:10px">
-          Tip: Location is exact match for now.
+          Tip: cards below update when you search.
+        </div>
+
+        <div style="margin-top:10px">
+          <a class="smallLink" id="openFullResults" href="/renter.html">Open full results page</a>
         </div>
       </div>
 
@@ -46,32 +56,247 @@
         <div class="sub" style="margin-top:6px">
           Register/login first if you want to book, watch, message, or pay.
         </div>
-        <div class="row" style="margin-top:12px">
+        <div class="row" style="margin-top:12px;flex-wrap:wrap;">
           <a class="btnOutline" href="/register.html" style="text-decoration:none;display:inline-flex;align-items:center;">Register</a>
           <a class="btnOutline" href="/login.html" style="text-decoration:none;display:inline-flex;align-items:center;">Login</a>
           <a class="btnOutline" href="/recover.html" style="text-decoration:none;display:inline-flex;align-items:center;">Recover password</a>
         </div>
         <div class="sub" style="margin-top:12px">
-          Owner? Add listings on the Owner page and then test search + booking as a renter.
+          Owner? Add listings on the Owner page, then test search + booking as a renter.
         </div>
       </div>
+    </section>
+
+    <section class="card section" style="margin-top:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div>
+          <div style="font-weight:950;">Browse cars</div>
+          <div class="sub" id="hintText">Enter location + dates above to see available cars.</div>
+        </div>
+        <div class="pill" id="countPill">0 cars</div>
+      </div>
+
+      <div id="resultsGrid" class="gridCars" style="margin-top:14px"></div>
+      <pre id="debugOut" style="margin-top:12px;display:none"></pre>
     </section>
   </main>
 
   <script type="module">
-    import { setQueryParams } from "./ui.js";
+    import { apiGet, money, readQueryParams, setQueryParams, showToast, getUnsplashPhotoForCar } from "./ui.js";
 
-    const form = document.getElementById('heroForm');
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const loc = document.getElementById('location').value;
-      const start = document.getElementById('start').value;
-      const end = document.getElementById('end').value;
-      const maxPrice = document.getElementById('maxPrice').value;
+    const qp = readQueryParams();
 
-      const url = setQueryParams('/renter.html', { location: loc, start, end, maxPrice });
-      location.href = url;
+    const locationEl = document.getElementById("location");
+    const startEl = document.getElementById("start");
+    const endEl = document.getElementById("end");
+
+    const rangeEl = document.getElementById("priceRange");
+    const numEl = document.getElementById("priceNum");
+    const priceLabel = document.getElementById("priceLabel");
+
+    const searchBtn = document.getElementById("searchBtn");
+    const openFullResults = document.getElementById("openFullResults");
+
+    const grid = document.getElementById("resultsGrid");
+    const hintText = document.getElementById("hintText");
+    const countPill = document.getElementById("countPill");
+    const debugOut = document.getElementById("debugOut");
+
+    // Prefill from query params if present
+    if(qp.location) locationEl.value = qp.location;
+    if(qp.start) startEl.value = qp.start;
+    if(qp.end) endEl.value = qp.end;
+    if(qp.maxPrice){
+      // if they came with maxPrice, set both controls
+      const v = Math.max(0, Math.min(300, Number(qp.maxPrice)));
+      if(Number.isFinite(v)){
+        rangeEl.value = String(v);
+        numEl.value = String(v);
+      }
+    }
+
+    function setPriceUIFromRange(){
+      const v = Number(rangeEl.value);
+      // If slider is at max => treat as "Any price"
+      if(v >= Number(rangeEl.max)){
+        numEl.value = "";
+        priceLabel.textContent = "Any price";
+      }else{
+        numEl.value = String(v);
+        priceLabel.textContent = "$" + v + "/day max";
+      }
+    }
+
+    function setPriceUIFromNumber(){
+      const raw = numEl.value.trim();
+      if(raw === ""){
+        rangeEl.value = rangeEl.max;
+        priceLabel.textContent = "Any price";
+        return;
+      }
+      let v = Number(raw);
+      if(!Number.isFinite(v)) v = Number(rangeEl.max);
+      v = Math.max(Number(rangeEl.min), Math.min(Number(rangeEl.max), v));
+      rangeEl.value = String(v);
+
+      if(v >= Number(rangeEl.max)){
+        numEl.value = "";
+        priceLabel.textContent = "Any price";
+      }else{
+        priceLabel.textContent = "$" + v + "/day max";
+      }
+    }
+
+    // Init
+    rangeEl.value = rangeEl.value || rangeEl.max;
+    setPriceUIFromRange();
+
+    rangeEl.addEventListener("input", () => {
+      setPriceUIFromRange();
     });
+
+    numEl.addEventListener("input", () => {
+      setPriceUIFromNumber();
+    });
+
+    function getMaxPriceParam(){
+      const raw = numEl.value.trim();
+      if(raw === "") return "";
+      const v = Number(raw);
+      if(!Number.isFinite(v)) return "";
+      if(v >= Number(rangeEl.max)) return "";
+      return String(Math.max(0, v));
+    }
+
+    function updateFullResultsLink(){
+      const loc = locationEl.value.trim();
+      const start = startEl.value;
+      const end = endEl.value;
+      const maxPrice = getMaxPriceParam();
+
+      const url = setQueryParams("/renter.html", { location: loc, start, end, maxPrice });
+      openFullResults.href = url;
+    }
+
+    function clearGrid(msg){
+      grid.innerHTML = `<div class="sub">${msg}</div>`;
+      countPill.textContent = "0 cars";
+    }
+
+    function renderCars(cars){
+      grid.innerHTML = "";
+      countPill.textContent = cars.length + (cars.length === 1 ? " car" : " cars");
+
+      if(!cars.length){
+        grid.innerHTML = `<div class="sub">No cars found for that search.</div>`;
+        return;
+      }
+
+      const start = startEl.value;
+      const end = endEl.value;
+
+      for(const c of cars){
+        const card = document.createElement("div");
+        card.className = "card carCard";
+        card.innerHTML = `
+          <div class="carImg">
+            <img class="photo" alt="${c.year} ${c.make} ${c.model}"
+                 src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" />
+            <div class="imgCredit" id="credit-${c.id}">Photo credit</div>
+          </div>
+
+          <div class="carBody">
+            <div class="carTitle">${c.title || (c.year + " " + c.make + " " + c.model)}</div>
+            <div class="carMeta">${c.pickup_location} • ${c.mileage} miles</div>
+
+            <div class="carBottom">
+              <div class="price">${money(c.price_per_day_cents)}/day</div>
+              <a class="smallLink" href="/car.html?id=${c.id}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}">View</a>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+
+        const img = card.querySelector("img.photo");
+        const credit = card.querySelector(`#credit-${c.id}`);
+
+        getUnsplashPhotoForCar(c).then((photo) => {
+          if(!photo || !photo.small) return;
+
+          img.src = photo.small;
+          img.onload = () => img.classList.add("isLoaded");
+
+          credit.innerHTML = `Photo by <a href="${photo.photographerLink}" target="_blank" rel="noreferrer">${photo.photographerName}</a>
+                              on <a href="${photo.unsplashLink}" target="_blank" rel="noreferrer">Unsplash</a>`;
+        }).catch(()=>{});
+      }
+    }
+
+    async function runSearch(){
+      debugOut.style.display = "none";
+      debugOut.textContent = "";
+
+      const loc = locationEl.value.trim();
+      const start = startEl.value;
+      const end = endEl.value;
+
+      updateFullResultsLink();
+
+      if(!loc || !start || !end){
+        hintText.textContent = "Enter location + dates above to see available cars.";
+        clearGrid("Waiting for search…");
+        return;
+      }
+
+      if(Date.parse(end) <= Date.parse(start)){
+        showToast("Bad dates", "End date must be after start date.");
+        clearGrid("Fix your dates and try again.");
+        return;
+      }
+
+      hintText.textContent = `Showing cars for ${loc} (${start} → ${end})`;
+
+      const params = new URLSearchParams({ location: loc, start, end });
+      const maxPrice = getMaxPriceParam();
+      if(maxPrice) params.set("maxPrice", maxPrice);
+
+      const r = await apiGet("/api/cars/search?" + params.toString());
+      if(!r.ok){
+        // show the backend error so we can debug quickly
+        debugOut.style.display = "block";
+        debugOut.textContent = JSON.stringify(r, null, 2);
+        showToast("Search error", r.error || "Check console/network tab");
+        clearGrid("Search failed.");
+        return;
+      }
+
+      renderCars(r.cars || []);
+    }
+
+    // Button click search
+    searchBtn.addEventListener("click", () => runSearch());
+
+    // Optional: auto refresh when inputs change (simple debounce)
+    let t = null;
+    function scheduleSearch(){
+      clearTimeout(t);
+      t = setTimeout(runSearch, 250);
+    }
+
+    locationEl.addEventListener("input", scheduleSearch);
+    startEl.addEventListener("change", scheduleSearch);
+    endEl.addEventListener("change", scheduleSearch);
+    rangeEl.addEventListener("input", scheduleSearch);
+    numEl.addEventListener("input", scheduleSearch);
+
+    // First paint
+    updateFullResultsLink();
+    clearGrid("Waiting for search…");
+
+    // If the user landed with query params filled, auto-search
+    if(locationEl.value.trim() && startEl.value && endEl.value){
+      runSearch();
+    }
   </script>
 </body>
 </html>

@@ -1,89 +1,145 @@
+// public/ui.js
 
-export function qs(sel, root=document){ return root.querySelector(sel); }
-
-export async function apiGet(url){
-  const r = await fetch(url);
-  return r.json();
-}
-
-export async function apiPost(url, body){
-  const r = await fetch(url,{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify(body || {})
-  });
-  return r.json();
-}
-
-export function money(cents){
-  return '$' + (Number(cents || 0)/100).toFixed(2);
-}
-
-export function toISODate(d){
-  return d.toISOString().slice(0,10);
-}
-
-export function addDays(date, n){
-  const x = new Date(date);
-  x.setDate(x.getDate() + n);
-  return x;
-}
-
-export function daysBetween(start, end){
-  const ms = Date.parse(end) - Date.parse(start);
-  return Math.max(1, Math.ceil(ms/(1000*60*60*24)));
-}
-
-export function setQueryParams(url, params){
-  const u = new URL(url, location.origin);
-  for(const [k,v] of Object.entries(params)){
-    if(v == null || String(v).trim() === '') u.searchParams.delete(k);
-    else u.searchParams.set(k, String(v));
-  }
-  return u.pathname + '?' + u.searchParams.toString();
-}
-
-export function readQueryParams(){
+export function readQueryParams() {
+  const out = {};
   const p = new URLSearchParams(location.search);
-  const o = {};
-  for(const [k,v] of p.entries()) o[k]=v;
-  return o;
+  for (const [k, v] of p.entries()) out[k] = v;
+  return out;
 }
 
+export function setQueryParams(basePath, params = {}) {
+  const url = new URL(basePath, location.origin);
+
+  Object.entries(params).forEach(([k, v]) => {
+    if (v == null) return;
+    const s = String(v).trim();
+    if (s === "") return;
+    url.searchParams.set(k, s);
+  });
+
+  return url.pathname + (url.search ? url.search : "");
+}
+
+async function safeJson(res) {
+  try {
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function apiGet(path) {
+  try {
+    const res = await fetch(path, { credentials: "include" });
+    const data = await safeJson(res);
+
+    if (!res.ok) {
+      return {
+        ok: false,
+        error: (data && (data.error || data.message)) || `Request failed (${res.status})`,
+        status: res.status,
+      };
+    }
+
+    return data || { ok: true };
+  } catch {
+    return { ok: false, error: "Network error." };
+  }
+}
+
+export async function apiPost(path, body) {
+  try {
+    const res = await fetch(path, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body || {}),
+    });
+
+    const data = await safeJson(res);
+
+    if (!res.ok) {
+      return {
+        ok: false,
+        error: (data && (data.error || data.message)) || `Request failed (${res.status})`,
+        status: res.status,
+      };
+    }
+
+    return data || { ok: true };
+  } catch {
+    return { ok: false, error: "Network error." };
+  }
+}
+
+export function money(cents) {
+  const n = Number(cents);
+  if (!Number.isFinite(n)) return "$0.00";
+  return `$${(n / 100).toFixed(2)}`;
+}
+
+export function daysBetween(startISO, endISO) {
+  const s = Date.parse(startISO + "T00:00:00");
+  const e = Date.parse(endISO + "T00:00:00");
+  if (Number.isNaN(s) || Number.isNaN(e)) return 0;
+  return Math.max(0, Math.round((e - s) / (1000 * 60 * 60 * 24)));
+}
+
+export function toISODate(d) {
+  const dt = (d instanceof Date) ? d : new Date(d);
+  return dt.toISOString().slice(0, 10);
+}
+
+export function addDays(dateObj, n) {
+  const d = (dateObj instanceof Date) ? new Date(dateObj) : new Date(dateObj);
+  d.setDate(d.getDate() + Number(n || 0));
+  return d;
+}
+
+export function todayISO() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return toISODate(d);
+}
+
+export function addDaysISO(isoDate, n) {
+  const d = new Date(isoDate + "T00:00:00");
+  d.setDate(d.getDate() + Number(n || 0));
+  return toISODate(d);
+}
+
+// Toast helper
 let _toastTimer = null;
 
-export function showToast(title, sub=''){
-  let t = document.getElementById('toast');
-  if(!t){
-    t = document.createElement('div');
-    t.id = 'toast';
-    t.className = 'toast';
+export function showToast(title, sub = "") {
+  let t = document.getElementById("toast");
+  if (!t) {
+    t = document.createElement("div");
+    t.id = "toast";
+    t.className = "toast";
     document.body.appendChild(t);
   }
 
   t.innerHTML =
     `<div style="font-weight:950">${escapeHtml(String(title))}</div>` +
-    (sub ? `<div class="toastSub">${escapeHtml(String(sub))}</div>` : '');
+    (sub ? `<div class="toastSub">${escapeHtml(String(sub))}</div>` : "");
 
-  t.classList.add('toastShow');
+  t.classList.add("toastShow");
 
-  if(_toastTimer) clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(()=> t.classList.remove('toastShow'), 2400);
+  if (_toastTimer) clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove("toastShow"), 2400);
 }
 
-function escapeHtml(s){
-  return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+function escapeHtml(s) {
+  return s
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 }
 
-export function carPhotoUrl(car, w = 800, h = 600) {
-  const make = String(car?.make || "car");
-  const model = String(car?.model || "photo");
-  const year = String(car?.year || "0000");
-
-  const seed = `${make}-${model}-${year}`
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-
-  return `https://picsum.photos/seed/${seed}/${w}/${h}`;
+// Unsplash helper (calls your backend proxy)
+export async function getUnsplashPhotoForCar(car) {
+  const q = `${car.year} ${car.make} ${car.model} car`;
+  const r = await apiGet(`/api/photos/unsplash?query=${encodeURIComponent(q)}`);
+  return r.ok ? r.photo : null;
 }

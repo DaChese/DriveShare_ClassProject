@@ -22,7 +22,9 @@
     <div class="detailLayout">
       <section class="card section">
         <div class="gallery">
-          <img id="heroImg" alt="Car photo">
+          <img id="heroImg" class="photo" alt="Car photo"
+              src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" />
+          <div class="imgCredit" id="heroCredit"></div>
         </div>
 
         <div style="margin-top:14px">
@@ -46,8 +48,8 @@
           <div class="sub" style="margin-top:6px">Notify me when price is low enough and my dates are open.</div>
           <div class="row" style="margin-top:12px">
             <input class="input" id="watchMax" placeholder="Max $/day (optional)" />
-            <input class="input" id="watchStart" placeholder="Want start YYYY-MM-DD (optional)" />
-            <input class="input" id="watchEnd" placeholder="Want end YYYY-MM-DD (optional)" />
+            <input class="input" id="watchStart" type="date" />
+            <input class="input" id="watchEnd" type="date" />
             <button class="btnOutline" id="watchBtn">Save watch</button>
           </div>
           <pre id="watchOut" style="margin-top:10px;display:none"></pre>
@@ -70,8 +72,8 @@
           <div class="sub" style="margin-top:6px">Use blocks for maintenance or personal use.</div>
 
           <div class="row" style="margin-top:12px">
-            <input class="input" id="blkStart" placeholder="Block start YYYY-MM-DD" />
-            <input class="input" id="blkEnd" placeholder="Block end YYYY-MM-DD" />
+            <input class="input" id="blkStart" type="date" />
+            <input class="input" id="blkEnd" type="date" />
             <input class="input" id="blkReason" placeholder="Reason (optional)" style="min-width:260px" />
             <button class="btnOutline" id="addBlockBtn">Add block</button>
           </div>
@@ -89,8 +91,8 @@
         <div class="sub" style="margin-top:8px">Daily rate × trip length.</div>
 
         <div class="row" style="margin-top:12px">
-          <input class="input" id="start" placeholder="Start YYYY-MM-DD"/>
-          <input class="input" id="end" placeholder="End YYYY-MM-DD"/>
+          <input class="input" id="start" type="date"/>
+          <input class="input" id="end" type="date"/>
         </div>
 
         <div class="card section" style="margin-top:12px; box-shadow:none">
@@ -117,25 +119,10 @@
   </main>
 
   <script type="module">
-    import { apiGet, apiPost, money, daysBetween, addDays, toISODate, readQueryParams, showToast, carPhotoUrl } from "./ui.js";
+    import { apiGet, apiPost, money, daysBetween, addDays, toISODate, readQueryParams, showToast, getUnsplashPhotoForCar } from "./ui.js";
 
     const qp = readQueryParams();
     const carId = qp.id;
-
-    const bookingIdEl = document.getElementById('bookingId');
-
-    try{
-      const raw = localStorage.getItem('ds_prefill_booking');
-      if(raw){
-        const obj = JSON.parse(raw);
-
-        if(String(obj.carId) === String(carId)){
-          bookingIdEl.value = obj.bookingId;
-          localStorage.removeItem('ds_prefill_booking');
-          showToast('Booking ready to pay', `Booking #${obj.bookingId}`);
-        }
-      }
-    }catch(e){}
 
     const carTitle = document.getElementById('carTitle');
     const carMeta = document.getElementById('carMeta');
@@ -163,6 +150,28 @@
     if(qp.start) wStartEl.value = qp.start;
     if(qp.end) wEndEl.value = qp.end;
 
+    // Keep end >= start
+    startEl.addEventListener('change', () => {
+      if(startEl.value) endEl.min = startEl.value;
+      if(endEl.value && endEl.value < endEl.min) endEl.value = endEl.min;
+      updateQuote();
+    });
+    endEl.addEventListener('change', updateQuote);
+
+    // Prefill booking id if renter booked from results
+    const bookingIdEl = document.getElementById('bookingId');
+    try{
+      const raw = localStorage.getItem('ds_prefill_booking');
+      if(raw){
+        const obj = JSON.parse(raw);
+        if(String(obj.carId) === String(carId)){
+          bookingIdEl.value = obj.bookingId;
+          localStorage.removeItem('ds_prefill_booking');
+          showToast('Booking ready to pay', `Booking #${obj.bookingId}`);
+        }
+      }
+    }catch(e){}
+
     let car = null;
     let me = null;
 
@@ -177,9 +186,22 @@
       const r = await apiGet('/api/cars/' + carId);
       if(!r.ok){ carTitle.textContent = 'Car not found'; return; }
       car = r.car;
-      const hero = document.getElementById("heroImg");
-      hero.src = carPhotoUrl(car, 1200, 800);
-      hero.onerror = () => { hero.style.display = "none"; };
+
+      const heroImg = document.getElementById("heroImg");
+      const heroCredit = document.getElementById("heroCredit");
+
+      getUnsplashPhotoForCar(car).then((photo) => {
+        if (!photo) return;
+        const url = photo.regular || photo.small;
+        if (!url) return;
+
+        heroImg.src = url;
+        heroImg.onload = () => heroImg.classList.add("isLoaded");
+
+        heroCredit.innerHTML =
+          `Photo by <a href="${photo.photographerLink}" target="_blank" rel="noreferrer">${photo.photographerName}</a>
+           on <a href="${photo.unsplashLink}" target="_blank" rel="noreferrer">Unsplash</a>`;
+      }).catch(() => {});
 
       carTitle.textContent = car.title || `${car.year} ${car.make} ${car.model}`;
       carMeta.textContent = `${car.year} ${car.make} ${car.model} • ${car.mileage} miles • ${car.pickup_location}`;
@@ -191,6 +213,8 @@
       if(me && me.id === car.owner_id){
         ownerTools.style.display = 'block';
       }
+
+      updateQuote();
     }
     await loadCar();
 
@@ -227,7 +251,6 @@
         calendar.appendChild(cell);
       }
 
-      // Owner blocks list
       if(ownerTools.style.display !== 'none'){
         blocksList.innerHTML = '';
         if(!r.blocks.length){
@@ -263,9 +286,6 @@
       const d = daysBetween(s,e);
       quote.textContent = `${d} day(s) × ${money(car.price_per_day_cents)}/day = ${money(d * car.price_per_day_cents)}`;
     }
-    startEl.addEventListener('input', updateQuote);
-    endEl.addEventListener('input', updateQuote);
-    updateQuote();
 
     document.getElementById('bookBtn').addEventListener('click', async () => {
       if(!car) return;

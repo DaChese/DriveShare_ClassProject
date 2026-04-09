@@ -60,17 +60,75 @@ a{ color:inherit; }
 
 /* Card */
 .carCard{ overflow:hidden; }
-.carImg{ height:150px; background:linear-gradient(135deg, rgba(37,99,235,.18), rgba(16,185,129,.18)); border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:center; color:var(--muted); font-weight:900; }
-.carBody{ padding:14px; }
+.carImg{
+  height:150px;
+  background:linear-gradient(135deg, rgba(37,99,235,.18), rgba(16,185,129,.18));
+  border-bottom:1px solid var(--line);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--muted);
+  font-weight:900;
+
+  /* important for images */
+  position: relative;
+  overflow: hidden;
+}
+
+.carImg img{
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
 .carTitle{ font-weight:950; margin-bottom:6px; }
 .carMeta{ color:var(--muted); font-size:13px; }
 .carBottom{ margin-top:12px; display:flex; justify-content:space-between; align-items:center; }
 .price{ font-weight:950; }
 .smallLink{ text-decoration:none; font-weight:950; color:var(--accent2); }
 
+/* extra car-card polish (badges + small book button) */
+.badgeRow{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+.badgeSm{
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--muted);
+  background: #fff;
+}
+.rightActions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+.btnSm{
+  height:34px;
+  padding:0 12px;
+  border-radius:12px;
+  font-size:13px;
+}
+
 .carImg, .gallery{
   position: relative;
   overflow: hidden;
+}
+
+.gallery img{
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .carImg img{
@@ -164,3 +222,53 @@ a{ color:inherit; }
   font-size: 12px;
   margin-top: 4px;
 }
+
+/* Unsplash image fill + fade in */
+.carImg, .gallery{
+  position: relative;
+  overflow: hidden;
+}
+
+.carImg img.photo,
+.gallery img.photo{
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0;
+  transition: opacity .18s ease;
+}
+
+.carImg img.photo.isLoaded,
+.gallery img.photo.isLoaded{
+  opacity: 1;
+}
+
+/* Attribution overlay */
+.imgCredit{
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  right: 10px;
+  display: none;
+  font-size: 11px;
+  line-height: 1.2;
+  color: rgba(255,255,255,.92);
+  background: rgba(17,24,39,.55);
+  border-radius: 10px;
+  padding: 6px 8px;
+}
+
+.carImg:hover .imgCredit,
+.gallery:hover .imgCredit{
+  display: block;
+}
+
+.imgCredit a{
+  color: rgba(255,255,255,.95);
+  font-weight: 900;
+  text-decoration: none;
+}
+

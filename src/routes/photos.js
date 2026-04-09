@@ -1,16 +1,20 @@
 import express from "express";
 
-const TTL_MS = 1000 * 60 * 60 * 24; // 24h cache
-const cache = new Map(); // key -> { at, data }
+const TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
+const cache = new Map(); // query -> { at, photo }
 
 function cacheGet(key) {
   const v = cache.get(key);
   if (!v) return null;
-  if (Date.now() - v.at > TTL_MS) { cache.delete(key); return null; }
-  return v.data;
+  if (Date.now() - v.at > TTL_MS) {
+    cache.delete(key);
+    return null;
+  }
+  return v.photo;
 }
-function cacheSet(key, data) {
-  cache.set(key, { at: Date.now(), data });
+
+function cacheSet(key, photo) {
+  cache.set(key, { at: Date.now(), photo });
 }
 
 export default function photoRoutes() {
@@ -30,7 +34,6 @@ export default function photoRoutes() {
     const hit = cacheGet(key);
     if (hit) return res.json({ ok: true, photo: hit, cached: true });
 
-    // Unsplash Search API
     const url = new URL("https://api.unsplash.com/search/photos");
     url.searchParams.set("query", query);
     url.searchParams.set("per_page", "1");
@@ -42,50 +45,26 @@ export default function photoRoutes() {
     });
 
     if (!apiRes.ok) {
-      const text = await apiRes.text();
-      return res.status(502).json({ ok: false, error: "Unsplash error", detail: text });
+      const detail = await apiRes.text();
+      return res.status(502).json({ ok: false, error: "Unsplash error", detail });
     }
 
     const json = await apiRes.json();
     const p = json?.results?.[0];
     if (!p) return res.json({ ok: true, photo: null });
 
-    // Attribution (UTM required by API guidelines)
     const utm = "utm_source=driveshare&utm_medium=referral";
-    const photographerName = p.user?.name || "Unknown";
-    const photographerLink = (p.user?.links?.html || "https://unsplash.com") + `?${utm}`;
-    const unsplashLink = `https://unsplash.com?${utm}`;
-
     const photo = {
       id: p.id,
       small: p.urls?.small,
       regular: p.urls?.regular,
-      photographerName,
-      photographerLink,
-      unsplashLink,
-      // for tracking downloads if you choose to do it
-      downloadLocation: p.links?.download_location,
+      photographerName: p.user?.name || "Unknown",
+      photographerLink: (p.user?.links?.html || "https://unsplash.com") + `?${utm}`,
+      unsplashLink: `https://unsplash.com?${utm}`,
     };
 
     cacheSet(key, photo);
     return res.json({ ok: true, photo, cached: false });
-  });
-
-  // Optional: POST /api/photos/unsplash/track  { downloadLocation: "..." }
-  // This helps satisfy “download/comparable event” tracking.
-  r.post("/unsplash/track", async (req, res) => {
-    const accessKey = process.env.UNSPLASH_ACCESS_KEY;
-    if (!accessKey) return res.status(400).json({ ok: false, error: "UNSPLASH_ACCESS_KEY not set." });
-
-    const dl = String(req.body?.downloadLocation || "").trim();
-    if (!dl) return res.status(400).json({ ok: false, error: "Missing downloadLocation." });
-
-    const apiRes = await fetch(dl, {
-      headers: { Authorization: `Client-ID ${accessKey}` },
-    });
-
-    // We don’t really care about the body; it’s just a “notice” call
-    return res.json({ ok: apiRes.ok });
   });
 
   return r;
