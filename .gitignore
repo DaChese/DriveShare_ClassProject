@@ -1,0 +1,9 @@
+/db
+/public
+/scripts
+/src
+/package.json
+/server.js
+/node_modules
+/package-lock.json
+/driveshare.sqlite
