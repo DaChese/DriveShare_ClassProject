@@ -26,6 +26,7 @@ async function main() {
   await ensureColumn(db, "watches", "watch_end_date", "TEXT");
   await ensureColumn(db, "messages", "is_read", "INTEGER NOT NULL DEFAULT 0");
   await ensureColumn(db, "reviews", "reviewee_type", "TEXT NOT NULL DEFAULT 'user'");
+  await ensureColumn(db, "cars", "seed_tag", "TEXT");
 
   console.log("DB initialized / migrated.");
   await db.close();

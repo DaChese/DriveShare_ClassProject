@@ -22,23 +22,19 @@
     <button class="btnOutline" id="logoutBtn">Logout</button>
     <a class="btnOutline btnLink" href="/recover.html">Forgot password?</a>
   </div>
-  <pre id="out" class="mt12 hidden"></pre>
 </div>
 </main>
   <script type="module">
 import { apiPost, showToast } from "./ui.js";
-const out = document.getElementById('out');
-function showOut(obj){ out.classList.remove('hidden'); out.textContent = JSON.stringify(obj,null,2); }
-function hideOut(){ out.classList.add('hidden'); out.textContent=''; }
 document.getElementById('loginBtn').addEventListener('click', async () => {
   const r = await apiPost('/api/auth/login', {email: email.value, password: pw.value});
-  if(r.ok){ hideOut(); showToast('Logged in'); }
-  else { showToast('Login failed', r.error || 'Check credentials'); showOut(r); }
+  if(r.ok){ showToast('Logged in'); }
+  else { showToast('Login failed', r.error || 'Check credentials'); }
 });
 document.getElementById('logoutBtn').addEventListener('click', async () => {
   const r = await apiPost('/api/auth/logout', {});
-  if(r.ok){ hideOut(); showToast('Logged out'); }
-  else { showToast('Logout failed', r.error || 'Try again'); showOut(r); }
+  if(r.ok){ showToast('Logged out'); }
+  else { showToast('Logout failed', r.error || 'Try again'); }
 });
 </script>
 </body></html>

@@ -51,24 +51,12 @@
           <button class="btn" id="regBtn">Create account</button>
           <a class="btnOutline btnLink" href="/login.html">Already have an account?</a>
         </div>
-
-        <pre id="out" class="mt12 hidden"></pre>
       </div>
     </div>
   </main>
 
   <script type="module">
     import { apiPost, showToast } from "./ui.js";
-    const out = document.getElementById('out');
-
-    function showOut(obj){
-      out.classList.remove('hidden');
-      out.textContent = JSON.stringify(obj, null, 2);
-    }
-    function hideOut(){
-      out.classList.add('hidden');
-      out.textContent = '';
-    }
 
     document.getElementById('regBtn').addEventListener('click', async () => {
       const payload = {
@@ -84,11 +72,9 @@
 
       const r = await apiPost('/api/auth/register', payload);
       if(r.ok){
-        hideOut();
         showToast('Account created', 'You can login now');
       } else {
         showToast('Register failed', r.error || 'Check fields');
-        showOut(r);
       }
     });
   </script>

@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html>
 <head><meta charset="utf-8"/><title>Notifications</title><link rel="stylesheet" href="/style.css"/></head>
@@ -29,96 +28,70 @@
       </div>
 
       <div id="list" class="gridCars mt14"></div>
-      <pre id="out" class="mt12 hidden"></pre>
     </div>
   </main>
 
 <script type="module">
-import { apiGet, apiPost } from "./ui.js";
+import { apiGet, apiPost, showToast } from "./ui.js";
 
 const list = document.getElementById('list');
-const out = document.getElementById('out');
 
-let currentUser = null;
-
-// Get current user info ////
-async function loadMe(){
-  const r = await apiGet('/api/auth/me');
-  currentUser = r.ok ? r.user : null;
-}
-await loadMe();
-
-// Parse notification text and get car/user details //////
-async function parseNotification(n) {
-  try {
-    // Extract data from notification text //
-    const data = {};
-    const parts = n.text.split('|');
-    for(const part of parts) {
-      const [key, val] = part.split(':');
-      data[key] = val;
-    }
-    
-    if(n.type === 'message' && data.car_id && data.from_user) {
-      const carId = data.car_id;
-      const fromUserId = data.from_user;
-      const senderName = data.sender_name;
-      const carName = data.car_name;
-      
-      // Get the car to find owner_id ////
-      const carRes = await apiGet(`/api/cars/${carId}`);
-      const ownerId = carRes.ok ? carRes.car.owner_id : null;
-      
-      // Determine role of sender //////
-      let senderRole = '';
-      if(fromUserId == ownerId) senderRole = '[Owner]';
-      else senderRole = '[Renter]';
-      
-      return { carId, fromUserId, senderName, carName, senderRole, isMessage: true };
-    }
-  } catch(e) {
-    console.error('Error parsing notification:', e);
-  }
-  return null;
+function parseMessageNotification(text){
+  const parts = {};
+  String(text || '').split('|').forEach((part) => {
+    const [key, ...rest] = part.split(':');
+    if (!key) return;
+    parts[key] = rest.join(':');
+  });
+  return parts;
 }
 
-function render(items){
+async function buildMessageCard(n){
+  const parts = parseMessageNotification(n.text);
+  const carId = parts.car_id;
+  const fromUserId = parts.from_user;
+  const senderName = parts.sender_name || `User #${fromUserId}`;
+  const carName = parts.car_name || `Car #${carId}`;
+
+  const carRes = await apiGet(`/api/cars/${carId}`);
+  const ownerId = carRes.ok ? carRes.car.owner_id : null;
+  const senderRole = Number(fromUserId) === Number(ownerId) ? 'Owner' : 'Buyer';
+
+  return `
+    <div class="section notificationMessageCard">
+      <div class="flexBetweenTopWrap">
+        <div class="fw950">New message</div>
+        <div class="pill">${n.is_read ? 'Read' : 'New'}</div>
+      </div>
+      <div class="sub mt6">${n.created_at}</div>
+      <div class="mt10">
+        From <strong>${senderName}</strong>
+        <span class="conversationRole">${senderRole}</span>
+      </div>
+      <div class="sub mt6">Conversation: <strong>${carName}</strong></div>
+      <div class="row mt12">
+        <button type="button" class="btn msgBtn" data-car-id="${carId}" data-user-id="${fromUserId}">Open inbox</button>
+        <button type="button" class="btnOutline readBtn" data-id="${n.id}">Mark read</button>
+      </div>
+    </div>
+  `;
+}
+
+async function render(items){
   list.innerHTML = '';
-  for(const n of items){
+
+  if(!items.length){
+    list.innerHTML = '<div class="sub">No notifications yet.</div>';
+    return;
+  }
+
+  for (const n of items) {
     const div = document.createElement('div');
     div.className = 'card';
-    
-    // Check if this is a message notification with clickable nav //
+
     if(n.type === 'message' && n.text.includes('car_id:') && n.text.includes('from_user:')) {
-      const parts = {};
-      n.text.split('|').forEach(part => {
-        const [key, val] = part.split(':');
-        parts[key] = val;
-      });
-      
-      const carId = parts.car_id;
-      const fromUserId = parts.from_user;
-      const senderName = parts.sender_name;
-      const carName = parts.car_name;
-      
-      // Parse role from notification - we'll fetch it //////
-      div.innerHTML = `
-        <div class="section" style="cursor: pointer; transition: all 0.2s;" onmouseover="this.style.backgroundColor='#f5f5f5'" onmouseout="this.style.backgroundColor='transparent'">
-          <div class="flexBetweenTopWrap">
-            <div class="fw950">📧 NEW MESSAGE</div>
-            <div class="pill">${n.is_read ? 'Read' : 'New'}</div>
-          </div>
-          <div class="sub mt6">${n.created_at}</div>
-          <div class="mt10">From <strong>${senderName}</strong> about <strong>${carName}</strong></div>
-          <div class="sub mt6">Car ID: <strong>${carId}</strong> · User ID: <strong>${fromUserId}</strong></div>
-          <div class="row mt12">
-            <button type="button" class="btn msgBtn" data-car-id="${carId}" data-user-id="${fromUserId}">Open thread</button>
-            <button type="button" class="btnOutline readBtn" data-id="${n.id}">Mark read</button>
-          </div>
-        </div>
-      `;
+      div.innerHTML = await buildMessageCard(n);
     } else {
-      // Other notifications (bookings, payments, etc) //
       div.innerHTML = `
         <div class="section">
           <div class="flexBetweenTopWrap">
@@ -133,22 +106,23 @@ function render(items){
         </div>
       `;
     }
+
     list.appendChild(div);
   }
-  if(!items.length) list.innerHTML = '<div class="sub">No notifications yet.</div>';
 }
 
 async function load(){
   const r = await apiGet('/api/notifications');
-  if(r.ok) render(r.notifications);
-  else { out.style.display='block'; out.textContent = JSON.stringify(r,null,2); }
+  if(r.ok) {
+    await render(r.notifications);
+  } else {
+    showToast('Notifications failed', r.error || 'Try again');
+  }
 }
 
 document.getElementById('loadBtn').addEventListener('click', load);
 
-// Click handlers for message buttons //////
 list.addEventListener('click', async (e) => {
-  // Open thread button ////
   const msgBtn = e.target.closest('button.msgBtn');
   if(msgBtn) {
     const carId = msgBtn.dataset.carId;
@@ -157,11 +131,10 @@ list.addEventListener('click', async (e) => {
     return;
   }
 
-  // Mark read button ////
   const readBtn = e.target.closest('button.readBtn');
   if(readBtn) {
     await apiPost(`/api/notifications/${readBtn.dataset.id}/read`, {});
-    load();
+    await load();
   }
 });
 
@@ -171,10 +144,10 @@ document.getElementById('markAllBtn').addEventListener('click', async () => {
   for(const n of r.notifications){
     if(!n.is_read) await apiPost(`/api/notifications/${n.id}/read`, {});
   }
-  load();
+  await load();
 });
 
-load();
+await load();
 </script>
 </body>
 </html>

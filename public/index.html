@@ -25,7 +25,7 @@
       <div>
         <div class="heroTitle">Find the right car for your trip.</div>
         <div class="sub mt8">
-          Pick a location + dates, then browse what’s available.
+          Pick filters if you want, or start by browsing the full selection.
         </div>
 
         <div class="searchBar mt14">
@@ -35,8 +35,8 @@
           <input class="input" id="end" type="date" />
 
           <div class="priceControls">
-            <input class="range" id="priceRange" type="range" min="0" max="300" step="5"/>
-            <input class="input w110" id="priceNum" type="number" min="0" max="300" step="5" placeholder="Any"/>
+            <input class="range" id="priceRange" type="range" min="0" max="301" step="1"/>
+            <input class="input w110" id="priceNum" type="number" min="0" max="300" step="1" placeholder="Any"/>
             <div class="pill" id="priceLabel">Any price</div>
           </div>
 
@@ -44,7 +44,7 @@
         </div>
 
         <div class="sub mt10">
-          Tip: cards below update when you search.
+          Tip: browse everything below, or add filters to narrow it down.
         </div>
 
         <div class="mt10">
@@ -63,7 +63,7 @@
           <a class="btnOutline btnLink" href="/recover.html">Recover password</a>
         </div>
         <div class="sub mt12">
-          Owner? Add listings on the Owner page, then test search + booking as a renter.
+          Owner? Add listings on the Owner page, then try searching and booking as a renter.
         </div>
       </div>
     </section>
@@ -72,18 +72,17 @@
       <div class="flexBetweenWrap">
         <div>
           <div class="fw950">Browse cars</div>
-          <div class="sub" id="hintText">Enter location + dates above to see available cars.</div>
+          <div class="sub" id="hintText">Showing all available cars. Add filters above to narrow the list.</div>
         </div>
         <div class="pill" id="countPill">0 cars</div>
       </div>
 
       <div id="resultsGrid" class="gridCars mt14"></div>
-      <pre id="debugOut" class="mt12 hidden"></pre>
     </section>
   </main>
 
   <script type="module">
-    import { apiGet, money, daysBetween, setQueryParams, showToast, todayISO, addDaysISO, getUnsplashPhotoForCar } from "./ui.js";
+    import { apiGet, money, setQueryParams, showToast, todayISO, addDaysISO, getUnsplashPhotoForCar } from "./ui.js";
 
     const locationEl = document.getElementById("location");
     const startEl = document.getElementById("start");
@@ -96,49 +95,59 @@
     const grid = document.getElementById("resultsGrid");
     const countPill = document.getElementById("countPill");
     const hintText = document.getElementById("hintText");
-    const debugOut = document.getElementById("debugOut");
 
     function setDefaults(){
-      // Default to tomorrow -> +3 days
       const t = todayISO();
       const s = addDaysISO(t, 1);
       const e = addDaysISO(s, 3);
       if(!startEl.value) startEl.value = s;
       if(!endEl.value) endEl.value = e;
-      // Keep end >= start+1
       endEl.min = addDaysISO(startEl.value, 1);
     }
 
-    function parseMaxPrice(){
-      const n = Number(String(numEl.value || "").trim());
-      const max = Number(rangeEl.max);
+    function priceBounds(){
+      const min = Number(rangeEl.min);
+      const anyValue = Number(rangeEl.max);
+      return { min, anyValue, numericMax: anyValue - 1 };
+    }
+
+    function clampPriceValue(raw){
+      const { min, numericMax } = priceBounds();
+      const text = String(raw ?? "").trim();
+      if(text === "") return null;
+      const n = Number(text);
       if(!Number.isFinite(n) || Number.isNaN(n)) return null;
-      if(n >= max) return null; // treat as Any
-      return n;
+      return Math.min(numericMax, Math.max(min, Math.round(n)));
     }
 
-    function updatePriceUIFromRange(){
-      const v = Number(rangeEl.value);
-      const max = Number(rangeEl.max);
-      if(v >= max){
-        labelEl.textContent = "Any price";
+    function parseMaxPrice(){
+      return clampPriceValue(numEl.value);
+    }
+
+    function setPriceValue(value){
+      const { anyValue } = priceBounds();
+      if(value == null){
+        rangeEl.value = String(anyValue);
         numEl.value = "";
-      } else {
-        labelEl.textContent = "Up to $" + v;
-        numEl.value = String(v);
-      }
-    }
-
-    function updateRangeFromNumber(){
-      const n = Number(String(numEl.value || "").trim());
-      const max = Number(rangeEl.max);
-      if(!Number.isFinite(n) || Number.isNaN(n) || n >= max){
-        rangeEl.value = String(max);
         labelEl.textContent = "Any price";
         return;
       }
-      rangeEl.value = String(n);
-      labelEl.textContent = "Up to $" + n;
+
+      const safe = clampPriceValue(value);
+      rangeEl.value = String(safe);
+      numEl.value = String(safe);
+      labelEl.textContent = "Up to $" + safe;
+    }
+
+    function updatePriceUIFromRange(){
+      const { anyValue } = priceBounds();
+      const v = Number(rangeEl.value);
+      setPriceValue(v >= anyValue ? null : v);
+    }
+
+    function updateRangeFromNumber(){
+      const raw = String(numEl.value || "").trim();
+      setPriceValue(raw === "" ? null : raw);
     }
 
     function updateFullResultsLink(){
@@ -156,20 +165,10 @@
       countPill.textContent = "0 cars";
     }
 
-    function setDebug(obj){
-      debugOut.classList.remove("hidden");
-      debugOut.textContent = JSON.stringify(obj, null, 2);
-    }
-
-    function hideDebug(){
-      debugOut.classList.add("hidden");
-      debugOut.textContent = "";
-    }
-
-    function cardHtml(car, photo){
+    function cardHtml(car, photo = null){
       const title = `${car.year} ${car.make} ${car.model}`;
       const price = money(car.price_per_day_cents) + "/day";
-      const meta = `${car.pickup_location} • ${car.mileage} miles`;
+      const meta = `${car.pickup_location} - ${car.mileage} miles`;
 
       return `
         <div class="card carCard clickCard" data-id="${car.id}">
@@ -178,7 +177,7 @@
               <div class="imgCredit">
                 Photo by <a href="${photo.photographerLink}" target="_blank" rel="noreferrer">${photo.photographerName}</a> on
                 <a href="${photo.unsplashLink}" target="_blank" rel="noreferrer">Unsplash</a>
-              </div>` : "Car"}
+              </div>` : `<span data-photo-slot="${car.id}">Car</span>`}
           </div>
           <div class="carBody">
             <div class="carTitle">${title}</div>
@@ -192,59 +191,80 @@
       `;
     }
 
+    async function hydratePhotos(cars){
+      for (const car of cars.slice(0, 24)) {
+        const photo = await getUnsplashPhotoForCar(car).catch(() => null);
+        if (!photo?.regular) continue;
+
+        const card = grid.querySelector(`.clickCard[data-id="${car.id}"] .carImg`);
+        if (!card) continue;
+
+        card.innerHTML = `
+          <img class="photo isLoaded" src="${photo.regular}" alt="${car.year} ${car.make} ${car.model}"/>
+          <div class="imgCredit">
+            Photo by <a href="${photo.photographerLink}" target="_blank" rel="noreferrer">${photo.photographerName}</a> on
+            <a href="${photo.unsplashLink}" target="_blank" rel="noreferrer">Unsplash</a>
+          </div>
+        `;
+      }
+    }
+
+    async function renderCars(cars){
+      countPill.textContent = `${cars.length} car${cars.length === 1 ? "" : "s"}`;
+
+      if(!cars.length){
+        clearGrid("No cars found.");
+        return;
+      }
+
+      grid.innerHTML = cars.map((c) => cardHtml(c)).join("");
+
+      grid.querySelectorAll(".clickCard").forEach((el) => {
+        el.addEventListener("click", (e) => {
+          const a = e.target.closest("a");
+          if(a) return;
+          location.href = "/car.html?id=" + encodeURIComponent(el.dataset.id);
+        });
+      });
+
+      hydratePhotos(cars);
+    }
+
     async function runSearch(){
       const loc = locationEl.value.trim();
       const start = startEl.value;
       const end = endEl.value;
-
-      hideDebug();
-
-      if(!loc || !start || !end){
-        hintText.textContent = "Enter location + dates above to see available cars.";
-        clearGrid("Waiting for search…");
-        updateFullResultsLink();
-        return;
-      }
-
       const maxPrice = parseMaxPrice();
-      const url = "/api/cars/search?location=" + encodeURIComponent(loc) +
-                  "&start=" + encodeURIComponent(start) +
-                  "&end=" + encodeURIComponent(end) +
-                  (maxPrice == null ? "" : ("&maxPrice=" + encodeURIComponent(maxPrice)));
+      const useSearch = Boolean(loc && start && end);
+
+      const url = useSearch
+        ? "/api/cars/search?location=" + encodeURIComponent(loc) +
+          "&start=" + encodeURIComponent(start) +
+          "&end=" + encodeURIComponent(end) +
+          (maxPrice == null ? "" : ("&maxPrice=" + encodeURIComponent(maxPrice)))
+        : "/api/cars/browse?limit=500" +
+          (loc ? ("&location=" + encodeURIComponent(loc)) : "") +
+          (maxPrice == null ? "" : ("&maxPrice=" + encodeURIComponent(maxPrice)));
 
       const r = await apiGet(url);
-
       if(!r.ok){
-        showToast("Search failed", r.error || "Try again");
-        setDebug(r);
-        clearGrid("Search failed.");
+        showToast("Browse failed", r.error || "Try again");
+        clearGrid("Unable to load cars.");
         return;
       }
 
       const cars = r.cars || [];
-      countPill.textContent = `${cars.length} car${cars.length === 1 ? "" : "s"}`;
-      hintText.textContent = cars.length ? "Click a card to open details." : "No cars found for that search.";
+      hintText.textContent = useSearch
+        ? (cars.length ? "Filtered results for your trip." : "No cars found for that search.")
+        : (cars.length ? "Showing the full available selection." : "No cars available right now.");
 
       if(!cars.length){
-        clearGrid("No cars found for that search.");
+        clearGrid(useSearch ? "No cars found for that search." : "No cars available right now.");
         updateFullResultsLink();
         return;
       }
 
-      // fetch photos in parallel (best effort)
-      const photos = await Promise.all(cars.map(c => getUnsplashPhotoForCar(c).catch(()=>null)));
-
-      grid.innerHTML = cars.map((c, i) => cardHtml(c, photos[i])).join("");
-
-      grid.querySelectorAll(".clickCard").forEach(el => {
-        el.addEventListener("click", (e) => {
-          const a = e.target.closest("a");
-          if(a) return;
-          const id = el.dataset.id;
-          location.href = "/car.html?id=" + encodeURIComponent(id);
-        });
-      });
-
+      await renderCars(cars);
       updateFullResultsLink();
     }
 
@@ -254,25 +274,18 @@
       t = setTimeout(runSearch, 250);
     }
 
-    // wiring
     searchBtn.addEventListener("click", runSearch);
     locationEl.addEventListener("input", scheduleSearch);
-    startEl.addEventListener("change", ()=>{ endEl.min = addDaysISO(startEl.value, 1); scheduleSearch(); });
+    startEl.addEventListener("change", () => { endEl.min = addDaysISO(startEl.value, 1); scheduleSearch(); });
     endEl.addEventListener("change", scheduleSearch);
+    rangeEl.addEventListener("input", () => { updatePriceUIFromRange(); scheduleSearch(); });
+    numEl.addEventListener("input", () => { updateRangeFromNumber(); scheduleSearch(); });
 
-    rangeEl.addEventListener("input", ()=>{ updatePriceUIFromRange(); scheduleSearch(); });
-    numEl.addEventListener("input", ()=>{ updateRangeFromNumber(); scheduleSearch(); });
-
-    // init
     setDefaults();
-    rangeEl.value = rangeEl.max;
-    updatePriceUIFromRange();
+    setPriceValue(null);
     updateFullResultsLink();
-    clearGrid("Waiting for search…");
-
-    if(locationEl.value.trim() && startEl.value && endEl.value){
-      runSearch();
-    }
+    clearGrid("Loading cars...");
+    runSearch();
   </script>
 </body>
 </html>

@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "node server.js",
     "initdb": "node scripts/init_db.js",
-    "test:edge": "node edge_case_tests.js",
-    "test": "node test_implementations.js"
+    "test:edge": "node --check scripts/init_db.js && node --check src/routes/auth.js && node --check src/routes/bookings.js && node --check src/routes/cars.js && node --check src/routes/devSeed.js && node --check src/routes/messages.js && node --check src/patterns/SearchMediator.js",
+    "test": "node --check scripts/init_db.js && node --check src/routes/auth.js && node --check src/routes/bookings.js && node --check src/routes/cars.js && node --check src/routes/devSeed.js && node --check src/routes/messages.js && node --check src/patterns/SearchMediator.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

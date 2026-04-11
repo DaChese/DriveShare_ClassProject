@@ -37,7 +37,7 @@
           <div class="flexBetweenTopWrap">
             <div>
               <div class="sub">Host</div>
-              <div id="hostName" class="fw950 mt6">—</div>
+              <div id="hostName" class="fw950 mt6">-</div>
             </div>
             <a id="msgOwner" class="btnOutline btnLink" href="/messages.html">Message owner</a>
           </div>
@@ -53,7 +53,6 @@
             <input class="input" id="watchEnd" type="date" />
             <button class="btnOutline" id="watchBtn">Save watch</button>
           </div>
-          <pre id="watchOut" class="mt10 hidden"></pre>
         </div>
 
         <div class="card section mt14 noShadow">
@@ -86,10 +85,10 @@
       <aside class="card section stickyCard">
         <div class="flexBetweenWrap">
           <div class="fw950">Book</div>
-          <div class="pill" id="pricePill">—</div>
+          <div class="pill" id="pricePill">-</div>
         </div>
 
-        <div class="sub mt8">Daily rate × trip length.</div>
+        <div class="sub mt8">Daily rate x trip length.</div>
 
         <div class="row mt12">
           <input class="input" id="start" type="date"/>
@@ -98,22 +97,21 @@
 
         <div class="card section mt12 noShadow">
           <div class="sub">Quote</div>
-          <div id="quote" class="fw950 mt6">—</div>
+          <div id="quote" class="fw950 mt6">-</div>
         </div>
 
         <div class="row mt12">
-          <button class="btn" id="bookBtn">Book</button>
-          <button class="btnOutline" id="cancelBtn">Cancel</button>
+          <button class="btn" id="bookBtn">Create booking</button>
+          <a class="btnOutline btnLink" href="/history.html">View bookings</a>
         </div>
 
         <div class="card section mt12 noShadow">
-          <div class="fw950">Payment (simulated)</div>
-          <div class="sub mt6">Pay to confirm booking.</div>
+          <div class="fw950">Payment</div>
+          <div class="sub mt6">Create the booking first, then click pay to confirm it and update both balances.</div>
           <div class="row mt12">
-            <input class="input" id="bookingId" placeholder="booking id"/>
-            <button class="btnOutline" id="payBtn">Pay</button>
+            <button class="btnOutline" id="payBtn" disabled>Pay now</button>
+            <div class="pill" id="payAmount">No pending booking</div>
           </div>
-          <pre id="out" class="mt10"></pre>
         </div>
       </aside>
     </div>
@@ -133,8 +131,8 @@
 
     const pricePill = document.getElementById('pricePill');
     const quote = document.getElementById('quote');
-    const out = document.getElementById('out');
-    const watchOut = document.getElementById('watchOut');
+    const payBtn = document.getElementById('payBtn');
+    const payAmount = document.getElementById('payAmount');
 
     const ownerTools = document.getElementById('ownerTools');
     const blocksList = document.getElementById('blocksList');
@@ -145,13 +143,11 @@
     const wStartEl = document.getElementById('watchStart');
     const wEndEl = document.getElementById('watchEnd');
 
-    // Prefill dates if renter came from search
     if(qp.start) startEl.value = qp.start;
     if(qp.end) endEl.value = qp.end;
     if(qp.start) wStartEl.value = qp.start;
     if(qp.end) wEndEl.value = qp.end;
 
-    // Keep end >= start
     startEl.addEventListener('change', () => {
       if(startEl.value) endEl.min = startEl.value;
       if(endEl.value && endEl.value < endEl.min) endEl.value = endEl.min;
@@ -159,22 +155,17 @@
     });
     endEl.addEventListener('change', updateQuote);
 
-    // Prefill booking id if renter booked from results
-    const bookingIdEl = document.getElementById('bookingId');
-    try{
-      const raw = localStorage.getItem('ds_prefill_booking');
-      if(raw){
-        const obj = JSON.parse(raw);
-        if(String(obj.carId) === String(carId)){
-          bookingIdEl.value = obj.bookingId;
-          localStorage.removeItem('ds_prefill_booking');
-          showToast('Booking ready to pay', `Booking #${obj.bookingId}`);
-        }
-      }
-    }catch(e){}
-
     let car = null;
     let me = null;
+    let currentBookingId = null;
+    let currentBookingTotalCents = null;
+
+    function setPendingPayment(bookingId, totalCents){
+      currentBookingId = bookingId;
+      currentBookingTotalCents = totalCents;
+      payBtn.disabled = !bookingId;
+      payAmount.textContent = bookingId ? `Booking #${bookingId} - ${money(totalCents)}` : 'No pending booking';
+    }
 
     async function loadMe(){
       const r = await apiGet('/api/auth/me');
@@ -205,7 +196,7 @@
       }).catch(() => {});
 
       carTitle.textContent = car.title || `${car.year} ${car.make} ${car.model}`;
-      carMeta.textContent = `${car.year} ${car.make} ${car.model} • ${car.mileage} miles • ${car.pickup_location}`;
+      carMeta.textContent = `${car.year} ${car.make} ${car.model} - ${car.mileage} miles - ${car.pickup_location}`;
       hostName.textContent = car.owner_name;
       pricePill.textContent = money(car.price_per_day_cents) + '/day';
 
@@ -264,7 +255,7 @@
               <div class="section">
                 <div class="flexBetweenTopWrap">
                   <div class="fw950">Block #${b.id}</div>
-                  <div class="pill">${b.start_date} → ${b.end_date}</div>
+                  <div class="pill">${b.start_date} -> ${b.end_date}</div>
                 </div>
                 <div class="sub mt6">${b.reason || ''}</div>
                 <div class="row mt12">
@@ -283,9 +274,9 @@
       if(!car) return;
       const s = startEl.value;
       const e = endEl.value;
-      if(!s || !e) { quote.textContent = '—'; return; }
+      if(!s || !e) { quote.textContent = '-'; return; }
       const d = daysBetween(s,e);
-      quote.textContent = `${d} day(s) × ${money(car.price_per_day_cents)}/day = ${money(d * car.price_per_day_cents)}`;
+      quote.textContent = `${d} day(s) x ${money(car.price_per_day_cents)}/day = ${money(d * car.price_per_day_cents)}`;
     }
 
     document.getElementById('bookBtn').addEventListener('click', async () => {
@@ -294,31 +285,25 @@
       const e = endEl.value;
 
       const r = await apiPost('/api/bookings', {carId:Number(carId), startDate:s, endDate:e});
-      out.textContent = JSON.stringify(r,null,2);
       if(r.ok){
-        document.getElementById('bookingId').value = r.bookingId;
-        showToast('Booking created', `Booking #${r.bookingId}`);
+        setPendingPayment(r.bookingId, r.totalCents);
+        showToast('Booking created', `Booking #${r.bookingId} is pending payment`);
         await loadCalendar();
       }else{
         showToast('Booking failed', r.error || 'Try different dates');
       }
     });
 
-    document.getElementById('payBtn').addEventListener('click', async () => {
-      const bookingId = document.getElementById('bookingId').value;
-      const r = await apiPost(`/api/bookings/${bookingId}/pay`, {});
-      out.textContent = JSON.stringify(r,null,2);
-      if(r.ok) showToast('Payment successful', `Booking #${bookingId} confirmed`);
-      else showToast('Payment failed', r.error || '');
-    });
-
-    document.getElementById('cancelBtn').addEventListener('click', async () => {
-      const bookingId = document.getElementById('bookingId').value;
-      const r = await apiPost(`/api/bookings/${bookingId}/cancel`, {});
-      out.textContent = JSON.stringify(r,null,2);
-      if(r.ok) showToast('Booking cancelled', `Booking #${bookingId}`);
-      else showToast('Cancel failed', r.error || '');
-      await loadCalendar();
+    payBtn.addEventListener('click', async () => {
+      if(!currentBookingId) return;
+      const r = await apiPost(`/api/bookings/${currentBookingId}/pay`, {});
+      if(r.ok){
+        showToast('Payment successful', `Booking #${currentBookingId} confirmed`);
+        setPendingPayment(null, null);
+        await loadCalendar();
+      }else{
+        showToast('Payment failed', r.error || 'Try again');
+      }
     });
 
     document.getElementById('watchBtn').addEventListener('click', async () => {
@@ -326,8 +311,6 @@
       const ws = wStartEl.value;
       const we = wEndEl.value;
       const r = await apiPost(`/api/cars/${carId}/watch`, { maxPricePerDay: max, watchStartDate: ws, watchEndDate: we });
-      watchOut.style.display = 'block';
-      watchOut.textContent = JSON.stringify(r,null,2);
       if(r.ok) showToast('Watch saved', 'We will notify you when conditions match');
       else showToast('Watch failed', r.error || '');
     });

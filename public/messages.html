@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html>
 <head><meta charset="utf-8"/><title>Messages</title><link rel="stylesheet" href="/style.css"/></head>
@@ -18,138 +17,314 @@
   <main class="wrap">
     <div class="card section">
       <h1 class="pageTitle">Messages</h1>
-      <div class="sub">Simple in-app chat between renter and owner.</div>
+      <div class="sub">Open your inbox, pick a conversation, and keep the car details in context.</div>
 
-      <div class="row mt14">
-        <input class="input" id="carId" placeholder="car id"/>
-        <input class="input" id="otherId" placeholder="other user id"/>
-        <button class="btnOutline" id="loadBtn">Load thread</button>
+      <div class="inboxLayout mt14">
+        <aside class="card section noShadow inboxSidebar">
+          <div class="flexBetweenWrap">
+            <div class="fw950">Inbox</div>
+            <button class="btnOutline btnSm" id="refreshBtn">Refresh</button>
+          </div>
+          <div class="sub mt8" id="inboxMeta">Loading conversations...</div>
+          <div id="conversationList" class="mt12"></div>
+        </aside>
+
+        <section class="card section noShadow inboxThreadPanel">
+          <div class="flexBetweenTopWrap">
+            <div>
+              <div class="fw950" id="threadTitle">Select a conversation</div>
+              <div class="sub mt6" id="threadSubtitle">Start from a car page or open a thread from your inbox.</div>
+            </div>
+          </div>
+
+          <div id="thread" class="card section msgBox mt14 noShadow">
+            <div class="sub">No conversation selected.</div>
+          </div>
+
+          <div class="row mt14">
+            <input class="input flex1Min260" id="body" placeholder="Type a message..." />
+            <button class="btn" id="sendBtn" disabled>Send</button>
+          </div>
+        </section>
       </div>
-
-      <div id="thread" class="card section msgBox mt14 noShadow"></div>
-      <div class="pill mt14" id="threadTitle">Enter car id and other user id.</div>
-
-      <div class="row mt14">
-        <input class="input flex1Min260" id="body" placeholder="type a message..."/>
-        <button class="btn" id="sendBtn">Send</button>
-      </div>
-
-      <pre id="out" class="mt12 hidden"></pre>
     </div>
   </main>
 
 <script type="module">
-import { apiGet, apiPost, readQueryParams } from "./ui.js";
+import { apiGet, apiPost, readQueryParams, setQueryParams, showToast } from "./ui.js";
+
 const params = readQueryParams();
-const carIdEl = document.getElementById('carId');
-const otherIdEl = document.getElementById('otherId');
+const conversationList = document.getElementById('conversationList');
+const inboxMeta = document.getElementById('inboxMeta');
 const thread = document.getElementById('thread');
-const out = document.getElementById('out');
 const threadTitle = document.getElementById('threadTitle');
-if(params.carId) carIdEl.value = params.carId;
-if(params.other) otherIdEl.value = params.other;
+const threadSubtitle = document.getElementById('threadSubtitle');
+const bodyEl = document.getElementById('body');
+const sendBtn = document.getElementById('sendBtn');
 
 let me = null;
-let threadOwnerId = null;     // Add: store owner ID for this thread ////
-let threadRenterId = null;    // Add: store renter ID for this thread //////
-async function loadMe(){
-  const r = await apiGet('/api/auth/me');
-  me = r.ok ? r.user : null;
+let conversations = [];
+let activeConversation = null;
+
+function carName(item){
+  return item.title || `${item.year} ${item.make} ${item.model}`;
 }
-await loadMe();
+
+function roleLabelForUser(conversation, userId){
+  if(!conversation || !userId) return '';
+  if(Number(userId) === Number(conversation.owner_id)) return 'Owner';
+  if(Number(userId) === Number(conversation.renter_id)) return 'Buyer';
+  return '';
+}
+
+function otherPartyLabel(conversation){
+  const label = roleLabelForUser(conversation, conversation.other_user_id);
+  return label ? `${conversation.other_user_name} (${label})` : conversation.other_user_name;
+}
+
+function myRoleLabel(conversation){
+  return roleLabelForUser(conversation, me && me.id);
+}
+
+function formatPreview(text){
+  const value = String(text || '').trim();
+  return value.length > 72 ? `${value.slice(0, 69)}...` : value || 'No messages yet.';
+}
+
+function sameConversation(item, carId, otherUserId){
+  return String(item.car_id) === String(carId) && String(item.other_user_id) === String(otherUserId);
+}
+
+function renderConversations(){
+  conversationList.innerHTML = '';
+
+  if(!conversations.length){
+    conversationList.innerHTML = '<div class="sub">No conversations yet. Use "Message owner" from a car page to start one.</div>';
+    inboxMeta.textContent = '0 conversations';
+    return;
+  }
+
+  inboxMeta.textContent = `${conversations.length} conversation${conversations.length === 1 ? '' : 's'}`;
+
+  for(const item of conversations){
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `conversationItem ${activeConversation && sameConversation(item, activeConversation.car_id, activeConversation.other_user_id) ? 'conversationItemActive' : ''}`;
+    button.dataset.carId = item.car_id;
+    button.dataset.otherUserId = item.other_user_id;
+    button.innerHTML = `
+      <div class="flexBetweenWrap">
+        <div>
+          <div class="fw950">${item.other_user_name}</div>
+          <div class="conversationRole mt6">${roleLabelForUser(item, item.other_user_id) || 'Conversation'}</div>
+        </div>
+        ${item.unread_count ? `<span class="pill conversationUnread">${item.unread_count} new</span>` : `<span class="conversationTime">${item.latest_created_at || ''}</span>`}
+      </div>
+      <div class="sub mt6">${carName(item)}</div>
+      <div class="conversationPreview mt8">${formatPreview(item.latest_body)}</div>
+    `;
+    conversationList.appendChild(button);
+  }
+}
+
+function renderEmptyThread(message){
+  thread.innerHTML = `<div class="sub">${message}</div>`;
+}
 
 function renderMessages(msgs){
   thread.innerHTML = '';
+
+  if(!msgs.length){
+    renderEmptyThread('No messages yet. Send the first message to start this conversation.');
+    return;
+  }
+
   for(const m of msgs){
+    const mine = me && m.sender_id === me.id;
     const row = document.createElement('div');
-    row.className = 'msgRow ' + (me && m.sender_id === me.id ? 'msgMine' : '');
-    
-    // Figure out if sender is owner or renter ////
-    let senderRole = '';
-    if(m.sender_id === threadOwnerId) senderRole = ' [Owner]';
-    else if(m.sender_id === threadRenterId) senderRole = ' [Renter]';
-    
+    row.className = `msgRow ${mine ? 'msgMine' : ''}`;
+    const roleLabel = mine
+      ? (myRoleLabel(activeConversation) ? `You (${myRoleLabel(activeConversation)})` : 'You')
+      : otherPartyLabel(activeConversation);
     row.innerHTML = `
       <div class="msgBubble">
         <div>${m.body}</div>
-        <div class="msgMeta">${m.created_at}${senderRole}</div>
+        <div class="msgMeta">${roleLabel} - ${m.created_at}</div>
       </div>
     `;
     thread.appendChild(row);
   }
-  if(!msgs.length) thread.innerHTML = '<div class="sub">No messages yet.</div>';
+
   thread.scrollTop = thread.scrollHeight;
 }
 
-async function loadHeader(){
-  const carId = Number(carIdEl.value);
-  const otherId = Number(otherIdEl.value);
+async function loadMe(){
+  const r = await apiGet('/api/auth/me');
+  me = r.ok ? r.user : null;
+}
 
-  if(!carId || !otherId){
-    threadTitle.textContent = "Enter car id and other user id.";
+async function buildDraftConversation(carId, otherUserId){
+  const [carRes, userRes] = await Promise.all([
+    apiGet(`/api/cars/${carId}`),
+    apiGet(`/api/users/${otherUserId}`)
+  ]);
+
+  return {
+    car_id: Number(carId),
+    other_user_id: Number(otherUserId),
+    other_user_name: userRes.ok ? userRes.user.display_name : `User #${otherUserId}`,
+    title: carRes.ok ? carRes.car.title : '',
+    make: carRes.ok ? carRes.car.make : '',
+    model: carRes.ok ? carRes.car.model : '',
+    year: carRes.ok ? carRes.car.year : '',
+    unread_count: 0,
+    latest_body: '',
+    latest_created_at: ''
+  };
+}
+
+async function loadConversations(options = {}){
+  const { preserveSelection = true, suppressAutoOpen = false } = options;
+  const r = await apiGet('/api/messages/conversations');
+
+  if(!r.ok){
+    inboxMeta.textContent = r.error || 'Unable to load conversations.';
+    renderConversations();
     return;
   }
 
-  const car = await apiGet(`/api/cars/${carId}`);
-  const other = await apiGet(`/api/users/${otherId}`);   // requires /api/users/:id route
-  const meRes = await apiGet('/api/auth/me');
+  conversations = r.conversations || [];
 
-  const carName = car.ok
-    ? (car.car.title || `${car.car.year} ${car.car.make} ${car.car.model}`)
-    : `Car #${carId}`;
-
-  const otherName = other.ok ? other.user.display_name : `User #${otherId}`;
-  const meName = meRes.ok ? meRes.user.display_name : "Guest";
-  
-  // Show roles: who is owner vs renter //////
-  let ownerName = '';
-  let renterName = '';
-  const meId = meRes.ok ? meRes.user.id : null;
-  
-  if(car.ok && car.car.owner_id === otherId) {
-    ownerName = otherName;
-    renterName = meName;
-  } else if(car.ok && meId === car.car.owner_id) {
-    ownerName = meName;
-    renterName = otherName;
+  if(preserveSelection && activeConversation){
+    const fresh = conversations.find((item) => sameConversation(item, activeConversation.car_id, activeConversation.other_user_id));
+    if(fresh) activeConversation = { ...activeConversation, ...fresh };
   }
 
-  const roleInfo = ownerName && renterName ? ` | 👤 ${ownerName} (Owner) ↔ ${renterName} (Renter)` : '';
-  threadTitle.textContent = `Chat: ${carName}${roleInfo}`;
+  renderConversations();
+
+  if(suppressAutoOpen) return;
+
+  if(activeConversation){
+    return;
+  }
+
+  if(params.carId && params.other){
+    const existing = conversations.find((item) => sameConversation(item, params.carId, params.other));
+    if(existing){
+      await selectConversation(existing);
+      return;
+    }
+
+    const draft = await buildDraftConversation(params.carId, params.other);
+    await selectConversation(draft);
+    return;
+  }
+
+  if(conversations.length){
+    await selectConversation(conversations[0]);
+  }
 }
+
+async function markThreadRead(messages){
+  const unread = (messages || []).filter((m) => me && m.sender_id !== me.id && !m.is_read);
+  if(!unread.length) return;
+
+  await Promise.all(unread.map((m) => apiPost(`/api/messages/${m.id}/read`, {})));
+}
+
 async function loadThread(){
-  const carId = Number(carIdEl.value);
-  const otherId = Number(otherIdEl.value);
-  const r = await apiGet(`/api/messages/thread?carId=${carId}&otherUserId=${otherId}`);
-  if(r.ok) {
-    threadOwnerId = r.owner_id;      // Store owner ID from response //////
-    threadRenterId = r.renter_id;    // Store renter ID from response //
-    renderMessages(r.messages);
-  } else { 
-    out.style.display='block'; 
-    out.textContent = JSON.stringify(r,null,2); 
+  if(!activeConversation){
+    threadTitle.textContent = 'Select a conversation';
+    threadSubtitle.textContent = 'Start from a car page or open a thread from your inbox.';
+    renderEmptyThread('No conversation selected.');
+    sendBtn.disabled = true;
+    return;
   }
+
+  threadTitle.textContent = activeConversation.other_user_name;
+  threadSubtitle.textContent = `${carName(activeConversation)} - You: ${myRoleLabel(activeConversation) || 'Participant'} - ${otherPartyLabel(activeConversation)}`;
+  sendBtn.disabled = false;
+
+  const r = await apiGet(`/api/messages/thread?carId=${activeConversation.car_id}&otherUserId=${activeConversation.other_user_id}`);
+  if(!r.ok){
+    showToast('Load failed', r.error || 'Unable to open this conversation');
+    renderEmptyThread(r.error || 'Unable to load this conversation.');
+    return;
+  }
+  renderMessages(r.messages);
+
+  await markThreadRead(r.messages);
+  await loadConversations({ preserveSelection: true, suppressAutoOpen: true });
+  renderConversations();
 }
 
-document.getElementById('loadBtn').addEventListener('click', async () => {
-  await loadHeader();
+async function selectConversation(item){
+  activeConversation = { ...item };
+  history.replaceState({}, '', setQueryParams('/messages.html', {
+    carId: activeConversation.car_id,
+    other: activeConversation.other_user_id
+  }));
+  renderConversations();
+  await loadThread();
+}
+
+conversationList.addEventListener('click', async (event) => {
+  const button = event.target.closest('button.conversationItem');
+  if(!button) return;
+
+  const next = conversations.find((item) => sameConversation(item, button.dataset.carId, button.dataset.otherUserId))
+    || await buildDraftConversation(button.dataset.carId, button.dataset.otherUserId);
+  await selectConversation(next);
+});
+
+sendBtn.addEventListener('click', async () => {
+  if(!activeConversation) return;
+
+  const body = bodyEl.value.trim();
+  if(!body) return;
+
+  const r = await apiPost('/api/messages', {
+    carId: activeConversation.car_id,
+    toUserId: activeConversation.other_user_id,
+    body
+  });
+
+  if(!r.ok){
+    showToast('Message failed', r.error || 'Try again');
+    return;
+  }
+
+  bodyEl.value = '';
+  showToast('Message sent');
+  await loadConversations({ preserveSelection: true, suppressAutoOpen: true });
+
+  const fresh = conversations.find((item) => sameConversation(item, activeConversation.car_id, activeConversation.other_user_id));
+  if(fresh) activeConversation = { ...activeConversation, ...fresh };
+
+  renderConversations();
   await loadThread();
 });
 
-document.getElementById('sendBtn').addEventListener('click', async () => {
-  const carId = Number(carIdEl.value);
-  const otherId = Number(otherIdEl.value);
-  const body = document.getElementById('body').value;
-  const r = await apiPost('/api/messages', {carId, toUserId: otherId, body});
-  if(!r.ok){ out.style.display='block'; out.textContent = JSON.stringify(r,null,2); return; }
-  document.getElementById('body').value = '';
-  await loadHeader();
-  await loadThread();
+bodyEl.addEventListener('keydown', async (event) => {
+  if(event.key === 'Enter' && !event.shiftKey){
+    event.preventDefault();
+    sendBtn.click();
+  }
 });
 
-if(carIdEl.value && otherIdEl.value) {
-  await loadHeader();
+document.getElementById('refreshBtn').addEventListener('click', async () => {
+  await loadConversations({ preserveSelection: true, suppressAutoOpen: true });
+  renderConversations();
   await loadThread();
+  showToast('Inbox refreshed');
+});
+
+await loadMe();
+if(!me){
+  inboxMeta.textContent = 'Log in to view your messages.';
+  renderEmptyThread('Log in to open your inbox.');
+} else {
+  await loadConversations({ preserveSelection: false });
 }
 </script>
 </body>

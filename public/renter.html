@@ -23,7 +23,7 @@
       <div class="flexBetweenTopWrap">
         <div>
           <h1 class="pageTitle">Search</h1>
-          <div class="sub">Location + dates are required. Max price is optional.</div>
+          <div class="sub">Browse the full selection, or add location and dates to filter availability.</div>
         </div>
         <div class="pill" id="mePill">Not logged in</div>
       </div>
@@ -34,8 +34,8 @@
         <input class="input" id="end" type="date" />
 
         <div class="rangeWrap">
-          <input class="range" id="maxPrice" type="range" min="20" max="300" step="5" value="300" />
-          <input class="input w110" id="maxPriceNum" type="number" min="20" max="300" step="5" placeholder="Any" />
+          <input class="range" id="maxPrice" type="range" min="0" max="301" step="1" value="301" />
+          <input class="input w110" id="maxPriceNum" type="number" min="0" max="300" step="1" placeholder="Any" />
           <div class="pill" id="maxPriceText">Any price</div>
         </div>
 
@@ -67,7 +67,7 @@
 
         <div class="field">
           <div class="label">Tip</div>
-          <div class="sub">Click any card to open the car details page.</div>
+          <div class="sub" id="tipText">Leave the fields open if you just want to browse everything.</div>
         </div>
       </aside>
 
@@ -105,6 +105,7 @@
         this.grid = document.getElementById('resultsGrid');
         this.countText = document.getElementById('countText');
         this.mePill = document.getElementById('mePill');
+        this.tipText = document.getElementById('tipText');
 
         this.lastCars = [];
 
@@ -116,48 +117,50 @@
         this.startEl.addEventListener('change', ()=> this.syncEndMin());
       }
 
-      setFromRange(){
-        const v = Number(this.maxEl.value);
-        const max = Number(this.maxEl.max);
+      priceBounds(){
+        const min = Number(this.maxEl.min);
+        const anyValue = Number(this.maxEl.max);
+        return { min, anyValue, numericMax: anyValue - 1 };
+      }
 
-        if(v >= max){
-          this.maxText.textContent = 'Any price';
+      clampPriceValue(raw){
+        const { min, numericMax } = this.priceBounds();
+        const text = String(raw ?? '').trim();
+        if(text === '') return null;
+        const n = Number(text);
+        if(!Number.isFinite(n) || Number.isNaN(n)) return null;
+        return Math.min(numericMax, Math.max(min, Math.round(n)));
+      }
+
+      setPriceValue(value){
+        const { anyValue } = this.priceBounds();
+
+        if(value == null){
+          this.maxEl.value = String(anyValue);
           this.maxNumEl.value = '';
-        } else {
-          this.maxText.textContent = `Up to $${v}`;
-          this.maxNumEl.value = String(v);
+          this.maxText.textContent = 'Any price';
+          return;
         }
+
+        const safe = this.clampPriceValue(value);
+        this.maxEl.value = String(safe);
+        this.maxNumEl.value = String(safe);
+        this.maxText.textContent = `Up to $${safe}`;
+      }
+
+      setFromRange(){
+        const { anyValue } = this.priceBounds();
+        const v = Number(this.maxEl.value);
+        this.setPriceValue(v >= anyValue ? null : v);
       }
 
       setFromNumber(){
         const raw = String(this.maxNumEl.value || '').trim();
-        const max = Number(this.maxEl.max);
-
-        if(raw === ''){
-          this.maxEl.value = String(max);
-          this.maxText.textContent = 'Any price';
-          return;
-        }
-
-        const n = Number(raw);
-        if(!Number.isFinite(n) || Number.isNaN(n) || n >= max){
-          this.maxEl.value = String(max);
-          this.maxText.textContent = 'Any price';
-          return;
-        }
-
-        this.maxEl.value = String(n);
-        this.maxText.textContent = `Up to $${n}`;
+        this.setPriceValue(raw === '' ? null : raw);
       }
 
       maxPriceOrNull(){
-        const raw = String(this.maxNumEl.value || '').trim();
-        if(raw === '') return null;
-
-        const n = Number(raw);
-        const max = Number(this.maxEl.max);
-        if(!Number.isFinite(n) || Number.isNaN(n) || n >= max) return null;
-        return n;
+        return this.clampPriceValue(this.maxNumEl.value);
       }
 
       syncEndMin(){
@@ -177,8 +180,7 @@
         if(!this.endEl.value) this.endEl.value = e;
 
         this.syncEndMin();
-        this.maxEl.value = this.maxEl.max;
-        this.setFromRange();
+        this.setPriceValue(null);
       }
 
       async loadMe(){
@@ -186,9 +188,9 @@
         this.mePill.textContent = me.ok ? ('Logged in: ' + me.user.display_name) : 'Not logged in';
       }
 
-      cardHtml(car, photo, days){
+      cardHtml(car, photo = null, days){
         const title = `${car.year} ${car.make} ${car.model}`;
-        const meta = `${car.pickup_location} • ${car.mileage} miles`;
+        const meta = `${car.pickup_location} - ${car.mileage} miles`;
         const price = `${money(car.price_per_day_cents)}/day`;
         const total = `${money(car.price_per_day_cents * days)}`;
 
@@ -198,7 +200,7 @@
             Photo by <a href="${photo.photographerLink}" target="_blank" rel="noreferrer">${photo.photographerName}</a> on
             <a href="${photo.unsplashLink}" target="_blank" rel="noreferrer">Unsplash</a>
           </div>
-        ` : "Car";
+        ` : `<span data-photo-slot="${car.id}">Car</span>`;
 
         return `
           <div class="card carCard clickCard" data-id="${car.id}">
@@ -222,6 +224,24 @@
             </div>
           </div>
         `;
+      }
+
+      async hydratePhotos(cars, days){
+        for (const car of cars.slice(0, 24)) {
+          const photo = await getUnsplashPhotoForCar(car).catch(() => null);
+          if (!photo?.regular) continue;
+
+          const card = this.grid.querySelector(`.clickCard[data-id="${car.id}"] .carImg`);
+          if (!card) continue;
+
+          card.innerHTML = `
+            <img class="photo isLoaded" src="${photo.regular}" alt="${car.year} ${car.make} ${car.model}"/>
+            <div class="imgCredit">
+              Photo by <a href="${photo.photographerLink}" target="_blank" rel="noreferrer">${photo.photographerName}</a> on
+              <a href="${photo.unsplashLink}" target="_blank" rel="noreferrer">Unsplash</a>
+            </div>
+          `;
+        }
       }
 
       sortCars(cars){
@@ -251,29 +271,32 @@
         const loc = this.locEl.value.trim();
         const start = this.startEl.value;
         const end = this.endEl.value;
+        const max = this.maxPriceOrNull();
+        const useSearch = Boolean(loc && start && end);
 
         if(updateUrl) this.updateUrl();
 
-        if(!loc || !start || !end){
-          showToast('Missing fields', 'Enter location + dates');
-          return;
-        }
-
-        const max = this.maxPriceOrNull();
-        const url = '/api/cars/search?location=' + encodeURIComponent(loc) +
-                    '&start=' + encodeURIComponent(start) +
-                    '&end=' + encodeURIComponent(end) +
-                    (max == null ? '' : ('&maxPrice=' + encodeURIComponent(max)));
+        const url = useSearch
+          ? '/api/cars/search?location=' + encodeURIComponent(loc) +
+            '&start=' + encodeURIComponent(start) +
+            '&end=' + encodeURIComponent(end) +
+            (max == null ? '' : ('&maxPrice=' + encodeURIComponent(max)))
+          : '/api/cars/browse?limit=500' +
+            (loc ? ('&location=' + encodeURIComponent(loc)) : '') +
+            (max == null ? '' : ('&maxPrice=' + encodeURIComponent(max)));
 
         const r = await apiGet(url);
         if(!r.ok){
-          showToast('Search failed', r.error || 'Try again');
+          showToast(useSearch ? 'Search failed' : 'Browse failed', r.error || 'Try again');
           this.lastCars = [];
           this.render();
           return;
         }
 
         this.lastCars = r.cars || [];
+        this.tipText.textContent = useSearch
+          ? 'Showing filtered availability for your trip.'
+          : 'Showing the full selection. Add location and dates to filter availability.';
         this.render();
       }
 
@@ -284,14 +307,13 @@
         this.countText.textContent = `${cars.length} car${cars.length === 1 ? '' : 's'}`;
 
         if(!cars.length){
-          this.grid.innerHTML = '<div class="sub">No cars found for that search.</div>';
+          this.grid.innerHTML = '<div class="sub">No cars found.</div>';
           return;
         }
 
-        const days = Math.max(1, daysBetween(this.startEl.value, this.endEl.value));
-        const photos = await Promise.all(cars.map(c => getUnsplashPhotoForCar(c).catch(()=>null)));
-
-        this.grid.innerHTML = cars.map((c,i)=> this.cardHtml(c, photos[i], days)).join('');
+        const hasTripDates = Boolean(this.startEl.value && this.endEl.value);
+        const days = hasTripDates ? Math.max(1, daysBetween(this.startEl.value, this.endEl.value)) : 1;
+        this.grid.innerHTML = cars.map((c)=> this.cardHtml(c, null, days)).join('');
 
         this.grid.querySelectorAll('.clickCard').forEach(el=>{
           el.addEventListener('click', (e)=>{
@@ -300,6 +322,8 @@
             location.href = '/car.html?id=' + encodeURIComponent(el.dataset.id);
           });
         });
+
+        this.hydratePhotos(cars, days);
       }
 
       initFromQuery(){
@@ -312,8 +336,7 @@
           this.maxNumEl.value = p.maxPrice;
           this.setFromNumber();
         } else {
-          this.maxEl.value = this.maxEl.max;
-          this.setFromRange();
+          this.setPriceValue(null);
         }
 
         this.syncEndMin();
@@ -324,10 +347,7 @@
     m.setDefaults();
     m.initFromQuery();
     await m.loadMe();
-
-    if(m.locEl.value.trim() && m.startEl.value && m.endEl.value){
-      m.search(false);
-    }
+    m.search(false);
   </script>
 </body>
 </html>

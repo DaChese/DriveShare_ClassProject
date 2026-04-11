@@ -38,7 +38,7 @@ function overlaps(aStart, aEnd, bStart, bEnd) {
 function toCentsFromDollars(v) {
   const n = Number(v);
   if (!Number.isFinite(n) || Number.isNaN(n)) return null;
-  if (n < 0) return null;
+  if (n <= 0) return null;
   return Math.round(n * 100);
 }
 
@@ -60,7 +60,7 @@ export default function carRoutes(db) {
     const criteria = {
       location: String(location || "").trim(),
       maxPrice: maxPrice != null ? Number(maxPrice) : null,
-      limit: Math.max(1, Math.min(50, Number(limit || 12) || 12))
+      limit: Math.max(1, Math.min(500, Number(limit || 500) || 500))
     };
 
     // Validate criteria

@@ -452,6 +452,77 @@ pre{
 .calAvailable{ border-color: rgba(75,122,85,.55); }
 
 /* Messages */
+.inboxLayout{
+  display:grid;
+  grid-template-columns:320px 1fr;
+  gap:14px;
+  align-items:start;
+}
+
+.inboxSidebar{
+  position:sticky;
+  top:74px;
+}
+
+.inboxThreadPanel{
+  min-height:520px;
+}
+
+.conversationItem{
+  width:100%;
+  text-align:left;
+  border:1px solid var(--line);
+  background:#fff;
+  border-radius:14px;
+  padding:12px;
+  cursor:pointer;
+  margin-top:10px;
+}
+
+.conversationItem:hover{
+  border-color:rgba(75,122,85,.4);
+}
+
+.conversationItemActive{
+  border-color:rgba(75,122,85,.55);
+  background:rgba(75,122,85,.08);
+}
+
+.conversationPreview{
+  color:var(--text);
+  font-size:14px;
+}
+
+.conversationRole{
+  display:inline-flex;
+  align-items:center;
+  padding:4px 8px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  background:rgba(75,122,85,.08);
+  color:var(--accent);
+  font-size:11px;
+  font-weight:900;
+}
+
+.conversationTime{
+  color:var(--muted);
+  font-size:12px;
+  font-weight:700;
+}
+
+.conversationUnread{
+  color:var(--accent);
+}
+
+.notificationMessageCard{
+  transition:background-color .2s ease, border-color .2s ease;
+}
+
+.notificationMessageCard:hover{
+  background:rgba(75,122,85,.05);
+}
+
 .msgBox{
   display:flex;
   flex-direction:column;
@@ -480,6 +551,16 @@ pre{
   color:var(--muted);
   font-size:12px;
   margin-top:6px;
+}
+
+@media(max-width:900px){
+  .inboxLayout{
+    grid-template-columns:1fr;
+  }
+
+  .inboxSidebar{
+    position:static;
+  }
 }
 
 /* Toast */

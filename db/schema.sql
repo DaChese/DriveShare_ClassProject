@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS cars (
   mileage INTEGER NOT NULL,
   pickup_location TEXT NOT NULL,
   price_per_day_cents INTEGER NOT NULL,
+  seed_tag TEXT,
   active INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),

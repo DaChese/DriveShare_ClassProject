@@ -23,14 +23,14 @@
       <div class="flexBetweenTopWrap">
         <div>
           <h1 class="pageTitle">Owner Dashboard</h1>
-          <div class="sub">Create listings (Builder), then manage price + active status.</div>
+          <div class="sub">Create listings, then manage price and active status.</div>
         </div>
-        <div class="pill" id="mePill">Checking login…</div>
+        <div class="pill" id="mePill">Checking login...</div>
       </div>
 
       <div class="card section mt14 noShadow">
         <div class="fw950">Create listing</div>
-        <div class="sub mt6">Tip: location like “Dearborn, MI” makes search nicer.</div>
+        <div class="sub mt6">Tip: a location like "Dearborn, MI" makes search nicer.</div>
 
         <div class="formGrid mt12">
           <input class="input" id="title" placeholder="title"/>
@@ -54,19 +54,15 @@
 
       <div class="resultsLayout">
         <aside class="card section sidebar noShadow">
-          <h3>Messages (demo)</h3>
-          <div class="sub">Open a thread between you and a renter.</div>
+          <h3>Messages</h3>
+          <div class="sub">Use History or the inbox to continue renter conversations for your cars.</div>
 
           <div class="field">
-            <div class="label">Car + renter</div>
-            <div class="row mt8">
-              <input class="input" id="msgCarId" placeholder="car id" />
-              <input class="input" id="msgRenterId" placeholder="renter user id" />
-            </div>
+            <a class="btnOutline btnLink" href="/messages.html">Open inbox</a>
           </div>
 
           <div class="field">
-            <a class="btnOutline btnLink" id="openMsg" href="/messages.html">Open Messages</a>
+            <a class="btnOutline btnLink" href="/history.html">Open history</a>
           </div>
         </aside>
 
@@ -137,7 +133,7 @@ function renderMine(cars){
       <div class="flexBetweenTopWrap">
         <div>
           <div class="fw950">${c.year} ${c.make} ${c.model}</div>
-          <div class="sub mt6">${c.pickup_location} • ${c.mileage} miles</div>
+          <div class="sub mt6">${c.pickup_location} - ${c.mileage} miles</div>
         </div>
         <div class="pill">${c.active ? 'Active' : 'Hidden'}</div>
       </div>
@@ -160,7 +156,7 @@ function renderMine(cars){
   }
 
   if(!cars.length){
-    myCars.innerHTML = '<div class="sub">No cars yet. Create one above, then click “Load My Cars”.</div>';
+    myCars.innerHTML = '<div class="sub">No cars yet. Create one above, then click "Load My Cars".</div>';
   }
 }
 
@@ -192,7 +188,6 @@ async function loadMine(){
   renderMine(r.cars || []);
 }
 
-// init
 const ok = await loadMe();
 if(ok) loadMine();
 
@@ -272,15 +267,6 @@ myCars.addEventListener('click', async (e) => {
     loadMine();
   }
 });
-
-function updateLink(){
-  const c = document.getElementById('msgCarId').value.trim();
-  const rId = document.getElementById('msgRenterId').value.trim();
-  document.getElementById('openMsg').href = `/messages.html?carId=${encodeURIComponent(c)}&other=${encodeURIComponent(rId)}`;
-}
-document.getElementById('msgCarId').addEventListener('input', updateLink);
-document.getElementById('msgRenterId').addEventListener('input', updateLink);
-updateLink();
 </script>
 </body>
 </html>

@@ -24,13 +24,12 @@
       <div class="flexBetweenTopWrap">
         <div>
           <h1 class="pageTitle">Rental History</h1>
-          <div class="sub">See past booking activity as renter and owner. Leave feedback for completed rentals.</div>
+          <div class="sub">See past booking activity as renter and owner. Leave feedback, message the other person, or cancel active bookings here.</div>
         </div>
-        <div class="pill" id="mePill">Checking login…</div>
+        <div class="pill" id="mePill">Checking login...</div>
       </div>
 
       <div id="historyContainer" class="mt14"></div>
-      <pre id="out" class="mt12 hidden"></pre>
     </div>
   </main>
 
@@ -39,8 +38,6 @@ import { apiGet, apiPost, money, showToast } from "./ui.js";
 
 const historyContainer = document.getElementById('historyContainer');
 const mePill = document.getElementById('mePill');
-const out = document.getElementById('out');
-
 function renderReviewForm(booking) {
   return `
     <div class="card section mt10 noShadow">
@@ -60,8 +57,9 @@ function renderReviewForm(booking) {
 function renderBookingRow(booking, role) {
   const counterpartyName = role === 'renter' ? booking.owner_name : booking.renter_name;
   const counterpartyLabel = role === 'renter' ? 'Owner' : 'Renter';
+  const otherUserId = role === 'renter' ? booking.owner_id : booking.renter_id;
   const reviewHtml = booking.my_review_id
-    ? `<div class="sub mt8">Your review: ${booking.my_rating} ★${booking.my_comment ? ` — ${booking.my_comment}` : ''}</div>`
+    ? `<div class="sub mt8">Your review: ${booking.my_rating} *${booking.my_comment ? ` - ${booking.my_comment}` : ''}</div>`
     : `<div class="sub mt8">You have not reviewed ${counterpartyName} yet.</div>`;
 
   return `
@@ -69,14 +67,19 @@ function renderBookingRow(booking, role) {
       <div class="flexBetweenTopWrap">
         <div>
           <div class="fw950">${booking.title || `${booking.year} ${booking.make} ${booking.model}`}</div>
-          <div class="sub mt6">Car #${booking.car_id} • ${booking.pickup_location}</div>
-          <div class="sub mt6">${booking.start_date} → ${booking.end_date}</div>
+          <div class="sub mt6">Car #${booking.car_id} - ${booking.pickup_location}</div>
+          <div class="sub mt6">${booking.start_date} to ${booking.end_date}</div>
         </div>
         <div class="pill">${booking.status}</div>
       </div>
       <div class="mt10">
         <div class="sub"><strong>${counterpartyLabel}:</strong> ${counterpartyName}</div>
         <div class="sub mt6"><strong>Total:</strong> ${money(booking.total_cents)}</div>
+      </div>
+      <div class="row mt12">
+        <a class="btnOutline btnLink" href="/messages.html?carId=${booking.car_id}&other=${otherUserId}">Message ${counterpartyLabel.toLowerCase()}</a>
+        ${role === 'renter' && booking.status === 'pending' ? `<button class="btn" data-action="pay-booking" data-booking="${booking.id}">Pay ${money(booking.total_cents)}</button>` : ''}
+        ${booking.status === 'cancelled' ? '' : `<button class="btnDanger" data-action="cancel-booking" data-booking="${booking.id}">Cancel booking</button>`}
       </div>
       ${reviewHtml}
       ${booking.my_review_id ? '' : renderReviewForm(booking)}
@@ -108,13 +111,9 @@ async function loadHistory() {
 
   const r = await apiGet('/api/bookings/history');
   if (!r.ok) {
-    out.classList.remove('hidden');
-    out.textContent = JSON.stringify(r, null, 2);
+    showToast('History failed', r.error || 'Try again');
     return;
   }
-
-  out.classList.add('hidden');
-  out.textContent = '';
 
   historyContainer.innerHTML = `
     ${renderSection('Renter history', r.renterBookings, 'renter')}
@@ -123,6 +122,34 @@ async function loadHistory() {
 }
 
 historyContainer.addEventListener('click', async (event) => {
+  const payButton = event.target.closest('button[data-action="pay-booking"]');
+  if (payButton) {
+    const bookingId = Number(payButton.dataset.booking);
+    const r = await apiPost(`/api/bookings/${bookingId}/pay`, {});
+    if (!r.ok) {
+      showToast('Payment failed', r.error || 'Try again');
+      return;
+    }
+
+    showToast('Payment successful', `Booking #${bookingId} confirmed`);
+    await loadHistory();
+    return;
+  }
+
+  const cancelButton = event.target.closest('button[data-action="cancel-booking"]');
+  if (cancelButton) {
+    const bookingId = Number(cancelButton.dataset.booking);
+    const r = await apiPost(`/api/bookings/${bookingId}/cancel`, {});
+    if (!r.ok) {
+      showToast('Cancel failed', r.error || 'Try again');
+      return;
+    }
+
+    showToast('Booking cancelled', `Booking #${bookingId}`);
+    await loadHistory();
+    return;
+  }
+
   const button = event.target.closest('button[data-action="submit-review"]');
   if (!button) return;
 
@@ -138,8 +165,6 @@ historyContainer.addEventListener('click', async (event) => {
   const r = await apiPost(`/api/bookings/${bookingId}/review`, { rating, comment });
   if (!r.ok) {
     showToast('Review failed', r.error || 'Try again');
-    out.classList.remove('hidden');
-    out.textContent = JSON.stringify(r, null, 2);
     return;
   }
 

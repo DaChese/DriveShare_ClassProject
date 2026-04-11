@@ -20,9 +20,9 @@ export default function bookingRoutes(db) {
   // =============================================
 
   // POST /api/bookings/
-  // Create new booking request with availability checking
+  // Create booking request with availability checking
   // Business rules: authenticated user, no booking/block overlaps, valid date range
-  // DB side-effects: inserts booking, creates notifications, sends email
+  // DB side-effects: inserts pending booking, creates notifications, sends email
   // Edge cases: car not found, overlaps with existing bookings/blocks
   r.post("/", requireAuth, async (req, res) => {
     const { carId, startDate, endDate } = req.body || {};
@@ -63,20 +63,20 @@ export default function bookingRoutes(db) {
     );
 
     // Get user details for notifications
+    const bookingId = result.lastID;
     const renter = await db.get("SELECT display_name, email FROM users WHERE id = ?", [req.userId]);
     const owner = await db.get("SELECT display_name, email FROM users WHERE id = ?", [car.owner_id]);
+    const carDetails = await db.get("SELECT title, make, model, year FROM cars WHERE id = ?", [cid]);
 
-    // Notify owner of booking request (in-app)
+    // Notify owner of the pending booking request
     await db.run("INSERT INTO notifications(user_id, type, text) VALUES(?,?,?)",
-      [car.owner_id, "booking", `New booking request for car #${cid} (booking #${result.lastID}).`]
+      [car.owner_id, "booking", `New booking request for car #${cid} (booking #${bookingId}).`]
     );
 
-    // Send email notification to owner
-    const booking = { id: result.lastID, start_date: startDate, end_date: endDate, total_cents: total };
-    const carDetails = await db.get("SELECT title, make, model, year FROM cars WHERE id = ?", [cid]);
+    const booking = { id: bookingId, start_date: startDate, end_date: endDate, total_cents: total };
     await emailService.sendBookingRequest(owner.email, renter.display_name, booking, carDetails);
 
-    return res.json({ ok: true, bookingId: result.lastID, totalCents: total });
+    return res.json({ ok: true, bookingId, totalCents: total, status: "pending" });
   });
 
   // =============================================
@@ -128,10 +128,12 @@ export default function bookingRoutes(db) {
   r.post("/:id/pay", requireAuth, async (req, res) => {
     const bookingId = Number(req.params.id);
     const booking = await db.get(
-      "SELECT b.id, b.renter_id, b.car_id, b.total_cents, c.owner_id FROM bookings b JOIN cars c ON c.id=b.car_id WHERE b.id = ?",
+      "SELECT b.id, b.status, b.renter_id, b.car_id, b.total_cents, c.owner_id FROM bookings b JOIN cars c ON c.id=b.car_id WHERE b.id = ?",
       [bookingId]
     );
     if (!booking) return res.status(404).json({ ok: false, error: "Booking not found." });
+    if (booking.status === "confirmed") return res.json({ ok: true, message: "Booking already confirmed." });
+    if (booking.status === "cancelled") return res.status(400).json({ ok: false, error: "Cancelled bookings cannot be paid." });
 
     // Process payment through proxy (includes security checks)
     const rPay = await payment.pay(db, req.userId, bookingId, booking.renter_id, booking.owner_id, booking.total_cents);

@@ -15,12 +15,13 @@ class SearchMediator {
   }
 
   async searchCars(criteria) {
-    const { location, startDate, endDate, maxPrice, limit = 50 } = criteria;
+    const { location, startDate, endDate, maxPrice, limit = 500 } = criteria;
 
     let query = `
       SELECT c.*
       FROM cars c
       WHERE c.active = 1
+        AND c.price_per_day_cents > 0
     `;
     const params = [];
 
@@ -57,15 +58,15 @@ class SearchMediator {
 
     // Apply ordering and limit
     query += " ORDER BY c.price_per_day_cents ASC LIMIT ?";
-    params.push(Math.min(limit, 50));
+    params.push(Math.min(limit, 500));
 
     return await this.db.all(query, params);
   }
 
   async browseCars(criteria) {
-    const { location, maxPrice, limit = 12 } = criteria;
+    const { location, maxPrice, limit = 500 } = criteria;
 
-    let query = "SELECT c.* FROM cars c WHERE c.active = 1";
+    let query = "SELECT c.* FROM cars c WHERE c.active = 1 AND c.price_per_day_cents > 0";
     const params = [];
 
     // Location filtering
@@ -82,7 +83,7 @@ class SearchMediator {
     }
 
     query += " ORDER BY c.price_per_day_cents ASC LIMIT ?";
-    params.push(Math.min(limit, 50));
+    params.push(Math.min(limit, 500));
 
     return await this.db.all(query, params);
   }

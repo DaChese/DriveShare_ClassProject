@@ -9,8 +9,85 @@ import express from "express";
 import { requireAuth } from "../middleware/auth.js";
 import emailService from "../services/emailService.js";
 
+async function ownerCanMessageRenter(db, carId, ownerId, renterId) {
+  const priorBooking = await db.get(
+    `SELECT 1
+     FROM bookings b
+     JOIN cars c ON c.id = b.car_id
+     WHERE b.car_id = ?
+       AND c.owner_id = ?
+       AND b.renter_id = ?
+     LIMIT 1`,
+    [carId, ownerId, renterId]
+  );
+  if (priorBooking) return true;
+
+  const priorMessage = await db.get(
+    `SELECT 1
+     FROM messages
+     WHERE car_id = ?
+       AND owner_id = ?
+       AND renter_id = ?
+     LIMIT 1`,
+    [carId, ownerId, renterId]
+  );
+  return Boolean(priorMessage);
+}
+
 export default function messageRoutes(db) {
   const r = express.Router();
+
+  // =============================================
+  // GET CONVERSATION INBOX ENDPOINT
+  // =============================================
+  r.get("/conversations", requireAuth, async (req, res) => {
+    try {
+      const me = req.userId;
+      const rows = await db.all(
+        `WITH convo AS (
+           SELECT
+             m.car_id,
+             m.owner_id,
+             m.renter_id,
+             MAX(m.id) AS latest_id,
+             SUM(CASE WHEN m.sender_id != ? AND m.is_read = 0 THEN 1 ELSE 0 END) AS unread_count
+           FROM messages m
+           WHERE m.owner_id = ? OR m.renter_id = ?
+           GROUP BY m.car_id, m.owner_id, m.renter_id
+         )
+         SELECT
+           c.car_id,
+           c.owner_id,
+           c.renter_id,
+           c.unread_count,
+           lm.id AS latest_message_id,
+           lm.body AS latest_body,
+           lm.created_at AS latest_created_at,
+           lm.sender_id AS latest_sender_id,
+           car.title,
+           car.make,
+           car.model,
+           car.year,
+           u.id AS other_user_id,
+           u.display_name AS other_user_name
+         FROM convo c
+         JOIN messages lm ON lm.id = c.latest_id
+         JOIN cars car ON car.id = c.car_id
+         JOIN users u
+           ON u.id = CASE
+             WHEN c.owner_id = ? THEN c.renter_id
+             ELSE c.owner_id
+           END
+         ORDER BY lm.id DESC`,
+        [me, me, me, me]
+      );
+
+      return res.json({ ok: true, conversations: rows || [] });
+    } catch (e) {
+      console.error("messages conversations failed:", e);
+      return res.status(500).json({ ok: false, error: "Server error." });
+    }
+  });
 
   // =============================================
   // GET MESSAGE THREAD ENDPOINT
@@ -44,6 +121,10 @@ export default function messageRoutes(db) {
       let renterId;
       if (me === ownerId) {
         renterId = otherUserId;
+        const allowed = await ownerCanMessageRenter(db, carId, ownerId, renterId);
+        if (!allowed) {
+          return res.status(403).json({ ok: false, error: "Owner can only message renters with a booking or existing thread for this car." });
+        }
       } else {
         renterId = me;
         if (otherUserId !== ownerId) {
@@ -103,6 +184,10 @@ export default function messageRoutes(db) {
         // owner sending -> must be sending to renter
         if (toId === ownerId) return res.status(400).json({ ok: false, error: "Can't message yourself." });
         renterId = toId;
+        const allowed = await ownerCanMessageRenter(db, cid, ownerId, renterId);
+        if (!allowed) {
+          return res.status(403).json({ ok: false, error: "Owner can only message renters with a booking or existing thread for this car." });
+        }
       } else {
         // renter sending -> must be sending to owner
         renterId = req.userId;
@@ -160,7 +245,7 @@ export default function messageRoutes(db) {
 
       // Check if user is part of this message thread
       const message = await db.get(
-        `SELECT m.id, m.car_id, m.owner_id, m.renter_id
+        `SELECT m.id, m.car_id, m.owner_id, m.renter_id, m.sender_id
          FROM messages m
          WHERE m.id = ?`,
         [messageId]

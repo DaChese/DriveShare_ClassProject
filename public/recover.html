@@ -30,33 +30,19 @@
         <input class="input" id="newpw" placeholder="new password" type="password" />
         <button class="btn" id="go">Verify and reset</button>
       </div>
-
-      <pre id="out" class="mt12 hidden"></pre>
     </div>
   </main>
 
   <script type="module">
     import { apiPost, showToast } from "./ui.js";
-    const out = document.getElementById('out');
-
-    function showOut(obj){
-      out.classList.remove('hidden');
-      out.textContent = JSON.stringify(obj, null, 2);
-    }
-    function hideOut(){
-      out.classList.add('hidden');
-      out.textContent = '';
-    }
 
     document.getElementById('go').addEventListener('click', async () => {
       const payload = { email: email.value, answers: {1: ans1.value, 2: ans2.value, 3: ans3.value}, newPassword: newpw.value };
       const r = await apiPost('/api/auth/recover', payload);
       if(r.ok){
-        hideOut();
         showToast('Password updated', 'You can login now');
       } else {
         showToast('Recovery failed', r.error || 'Check answers');
-        showOut(r);
       }
     });
   </script>
