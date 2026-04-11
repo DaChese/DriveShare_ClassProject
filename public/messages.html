@@ -74,8 +74,6 @@ function renderMessages(msgs){
 }
 
 async function loadHeader(){
-  await loadHeader();
-
   const carId = Number(carIdEl.value);
   const otherId = Number(otherIdEl.value);
 
@@ -105,7 +103,10 @@ async function loadThread(){
   else { out.style.display='block'; out.textContent = JSON.stringify(r,null,2); }
 }
 
-document.getElementById('loadBtn').addEventListener('click', loadThread);
+document.getElementById('loadBtn').addEventListener('click', async () => {
+  await loadHeader();
+  await loadThread();
+});
 
 document.getElementById('sendBtn').addEventListener('click', async () => {
   const carId = Number(carIdEl.value);
@@ -114,10 +115,14 @@ document.getElementById('sendBtn').addEventListener('click', async () => {
   const r = await apiPost('/api/messages', {carId, toUserId: otherId, body});
   if(!r.ok){ out.style.display='block'; out.textContent = JSON.stringify(r,null,2); return; }
   document.getElementById('body').value = '';
-  loadThread();
+  await loadHeader();
+  await loadThread();
 });
 
-if(carIdEl.value && otherIdEl.value) loadThread();
+if(carIdEl.value && otherIdEl.value) {
+  await loadHeader();
+  await loadThread();
+}
 </script>
 </body>
 </html>
