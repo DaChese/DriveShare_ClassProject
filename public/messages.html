@@ -50,6 +50,8 @@ if(params.carId) carIdEl.value = params.carId;
 if(params.other) otherIdEl.value = params.other;
 
 let me = null;
+let threadOwnerId = null;     // Add: store owner ID for this thread ////
+let threadRenterId = null;    // Add: store renter ID for this thread //////
 async function loadMe(){
   const r = await apiGet('/api/auth/me');
   me = r.ok ? r.user : null;
@@ -61,10 +63,16 @@ function renderMessages(msgs){
   for(const m of msgs){
     const row = document.createElement('div');
     row.className = 'msgRow ' + (me && m.sender_id === me.id ? 'msgMine' : '');
+    
+    // Figure out if sender is owner or renter ////
+    let senderRole = '';
+    if(m.sender_id === threadOwnerId) senderRole = ' [Owner]';
+    else if(m.sender_id === threadRenterId) senderRole = ' [Renter]';
+    
     row.innerHTML = `
       <div class="msgBubble">
         <div>${m.body}</div>
-        <div class="msgMeta">${m.created_at}</div>
+        <div class="msgMeta">${m.created_at}${senderRole}</div>
       </div>
     `;
     thread.appendChild(row);
@@ -92,15 +100,35 @@ async function loadHeader(){
 
   const otherName = other.ok ? other.user.display_name : `User #${otherId}`;
   const meName = meRes.ok ? meRes.user.display_name : "Guest";
+  
+  // Show roles: who is owner vs renter //////
+  let ownerName = '';
+  let renterName = '';
+  const meId = meRes.ok ? meRes.user.id : null;
+  
+  if(car.ok && car.car.owner_id === otherId) {
+    ownerName = otherName;
+    renterName = meName;
+  } else if(car.ok && meId === car.car.owner_id) {
+    ownerName = meName;
+    renterName = otherName;
+  }
 
-  threadTitle.textContent = `Chat: ${meName} ↔ ${otherName} | ${carName}`;
+  const roleInfo = ownerName && renterName ? ` | 👤 ${ownerName} (Owner) ↔ ${renterName} (Renter)` : '';
+  threadTitle.textContent = `Chat: ${carName}${roleInfo}`;
 }
 async function loadThread(){
   const carId = Number(carIdEl.value);
   const otherId = Number(otherIdEl.value);
   const r = await apiGet(`/api/messages/thread?carId=${carId}&otherUserId=${otherId}`);
-  if(r.ok) renderMessages(r.messages);
-  else { out.style.display='block'; out.textContent = JSON.stringify(r,null,2); }
+  if(r.ok) {
+    threadOwnerId = r.owner_id;      // Store owner ID from response //////
+    threadRenterId = r.renter_id;    // Store renter ID from response //
+    renderMessages(r.messages);
+  } else { 
+    out.style.display='block'; 
+    out.textContent = JSON.stringify(r,null,2); 
+  }
 }
 
 document.getElementById('loadBtn').addEventListener('click', async () => {

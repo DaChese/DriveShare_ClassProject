@@ -52,7 +52,7 @@ export default function messageRoutes(db) {
       }
 
       const rows = await db.all(
-        `SELECT m.id, m.sender_id, m.body, m.created_at, m.is_read
+        `SELECT m.id, m.sender_id, m.body, m.created_at, m.is_read, m.owner_id, m.renter_id
          FROM messages m
          WHERE m.car_id = ?
            AND m.owner_id = ?
@@ -61,7 +61,7 @@ export default function messageRoutes(db) {
         [carId, ownerId, renterId]
       );
 
-      return res.json({ ok: true, messages: rows || [] });
+      return res.json({ ok: true, messages: rows || [], owner_id: ownerId, renter_id: renterId });
     } catch (e) {
       console.error("messages thread failed:", e);
       return res.status(500).json({ ok: false, error: "Server error." });
