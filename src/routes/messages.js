@@ -121,10 +121,12 @@ export default function messageRoutes(db) {
       const recipient = await db.get("SELECT display_name, email FROM users WHERE id = ?", [toId]);
       const carDetails = await db.get("SELECT title, make, model, year FROM cars WHERE id = ?", [cid]);
 
-      // Notify receiver (in-app)
+      // Notify receiver (in-app) //////
+      // Store car_id:sender_id in text so frontend can navigate to thread //
+      const notifText = `car_id:${cid}|from_user:${req.userId}|sender_name:${sender.display_name}|car_name:${carDetails.title || `${carDetails.year} ${carDetails.make} ${carDetails.model}`}`;
       await db.run(
         "INSERT INTO notifications(user_id, type, text) VALUES(?,?,?)",
-        [toId, "message", `New message about car #${cid}.`]
+        [toId, "message", notifText]
       );
 
       // Send email notification
