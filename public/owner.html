@@ -1,104 +1,286 @@
-<!doctype html><html><head><meta charset="utf-8"/><title>Owner</title><link rel="stylesheet" href="/style.css"/></head>
-<body><main class="wrap"><h1>Owner Dashboard</h1>
-
-<div class="box">
-  <div class="sub">Create listing (Builder)</div>
-  <div class="row">
-    <input id="title" placeholder="title"/>
-    <input id="make" placeholder="make"/>
-    <input id="model" placeholder="model"/>
-    <input id="year" placeholder="year"/>
-    <input id="mileage" placeholder="mileage"/>
-    <input id="loc" placeholder="pickup location"/>
-    <input id="price" placeholder="price/day"/>
-    <button id="create">Create</button>
-    <button id="loadMine">Load My Cars</button>
-    <a class="card" href="/">Back</a>
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Owner - DriveShare</title>
+  <link rel="stylesheet" href="/style.css"/>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbarInner">
+      <a class="brand" href="/"><span class="logoDot"></span>DriveShare</a>
+      <div class="navLinks">
+        <a href="/renter.html">Search</a>
+        <a href="/notifications.html">Notifications</a>
+        <a href="/messages.html">Messages</a>
+        <a href="/history.html">History</a>
+      </div>
+    </div>
   </div>
-  <pre id="out"></pre>
-</div>
 
-<div class="box">
-  <div class="sub">My Cars (edit price / active)</div>
-  <div id="myCars" class="carGrid"></div>
-</div>
+  <main class="wrap">
+    <div class="card section">
+      <div class="flexBetweenTopWrap">
+        <div>
+          <h1 class="pageTitle">Owner Dashboard</h1>
+          <div class="sub">Create listings (Builder), then manage price + active status.</div>
+        </div>
+        <div class="pill" id="mePill">Checking login…</div>
+      </div>
 
-<div class="box">
-  <div class="sub">Messages (for demo)</div>
-  <div class="row">
-    <input id="msgCarId" placeholder="car id" />
-    <input id="msgRenterId" placeholder="renter user id" />
-    <a class="smallLink" id="openMsg" href="/messages.html">Open Messages</a>
-  </div>
-</div>
+      <div class="card section mt14 noShadow">
+        <div class="fw950">Create listing</div>
+        <div class="sub mt6">Tip: location like “Dearborn, MI” makes search nicer.</div>
 
-</main>
+        <div class="formGrid mt12">
+          <input class="input" id="title" placeholder="title"/>
+          <input class="input" id="make" placeholder="make"/>
+          <input class="input" id="model" placeholder="model"/>
+          <input class="input" id="year" placeholder="year"/>
+          <input class="input" id="mileage" placeholder="mileage"/>
+          <input class="input" id="loc" placeholder="pickup location"/>
+          <input class="input" id="price" placeholder="price/day"/>
+          <button class="btn" id="create">Create</button>
+        </div>
+
+        <div class="row mt12">
+          <button class="btnOutline" id="loadMine">Load My Cars</button>
+          <a class="btnOutline btnLink" href="/">Back</a>
+          <button class="btnOutline" id="toggleDebug">Show debug</button>
+        </div>
+
+        <pre id="out" class="mt12 hidden"></pre>
+      </div>
+
+      <div class="resultsLayout">
+        <aside class="card section sidebar noShadow">
+          <h3>Messages (demo)</h3>
+          <div class="sub">Open a thread between you and a renter.</div>
+
+          <div class="field">
+            <div class="label">Car + renter</div>
+            <div class="row mt8">
+              <input class="input" id="msgCarId" placeholder="car id" />
+              <input class="input" id="msgRenterId" placeholder="renter user id" />
+            </div>
+          </div>
+
+          <div class="field">
+            <a class="btnOutline btnLink" id="openMsg" href="/messages.html">Open Messages</a>
+          </div>
+        </aside>
+
+        <section>
+          <div class="flexBetweenWrap mb10">
+            <div class="fw950">My Cars</div>
+            <div class="pill" id="countPill">0 cars</div>
+          </div>
+
+          <div id="myCars" class="gridCars"></div>
+        </section>
+      </div>
+    </div>
+  </main>
+
 <script type="module">
-const out=document.getElementById('out');
-const myCars=document.getElementById('myCars');
+import { apiGet, apiPost, money, showToast } from "./ui.js";
 
-async function get(url){ const r=await fetch(url); return r.json(); }
-async function post(url,body){
-  const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});
-  return r.json();
+const out = document.getElementById('out');
+const toggleDebugBtn = document.getElementById('toggleDebug');
+const myCars = document.getElementById('myCars');
+const mePill = document.getElementById('mePill');
+const countPill = document.getElementById('countPill');
+const createBtn = document.getElementById('create');
+const loadMineBtn = document.getElementById('loadMine');
+
+let me = null;
+let debugOn = false;
+let lastDebug = null;
+
+function setDebug(obj){
+  lastDebug = obj;
+  if(!debugOn) return;
+  out.classList.remove('hidden');
+  out.textContent = JSON.stringify(obj, null, 2);
 }
-function money(cents){ return '$' + (cents/100).toFixed(2); }
 
-function renderMine(cars){
-  myCars.innerHTML = '';
-  for(const c of cars){
-    const div=document.createElement('div');
-    div.className='carCard';
-    div.innerHTML = `
-      <div class="carTop">
-        <div class="carTitle">${c.year} ${c.make} ${c.model}</div>
-        <div class="badge">${c.active ? 'Active' : 'Hidden'}</div>
-      </div>
-      <div class="carMeta">${c.pickup_location} • ${money(c.price_per_day_cents)}/day • ${c.mileage} miles</div>
-      <div class="row" style="margin-top:10px">
-        <input class="small" data-id="${c.id}" placeholder="new price/day" />
-        <button class="smallBtn" data-action="price" data-id="${c.id}">Update Price</button>
-        <button class="smallBtn" data-action="toggle" data-id="${c.id}">${c.active ? 'Disable' : 'Enable'}</button>
-        <a class="smallLink" href="/car.html?id=${c.id}">View</a>
-      </div>
-    `;
-    myCars.appendChild(div);
+function clearDebug(){
+  lastDebug = null;
+  if(!debugOn){
+    out.classList.add('hidden');
+    out.textContent = '';
   }
 }
 
-document.getElementById('create').onclick=async()=>{
-  const payload={title:title.value,make:make.value,model:model.value,year:Number(year.value),mileage:Number(mileage.value),
-    pickupLocation:loc.value,pricePerDay:Number(price.value)};
-  out.textContent=JSON.stringify(await post('/api/cars',payload),null,2);
-};
+toggleDebugBtn.addEventListener('click', () => {
+  debugOn = !debugOn;
+  toggleDebugBtn.textContent = debugOn ? 'Hide debug' : 'Show debug';
 
-document.getElementById('loadMine').onclick=async()=>{
-  const r = await get('/api/cars/mine/list');
-  out.textContent = JSON.stringify(r,null,2);
-  if(r.ok) renderMine(r.cars);
-};
-
-myCars.addEventListener('click', async (e) => {
-  const btn = e.target.closest('button');
-  if(!btn) return;
-  const id = btn.dataset.id;
-  const action = btn.dataset.action;
-  if(action === 'price'){
-    const input = myCars.querySelector(`input[data-id="${id}"]`);
-    const val = Number(input.value);
-    out.textContent = JSON.stringify(await post(`/api/cars/${id}/price`, {pricePerDay: val}), null, 2);
-  } else if(action === 'toggle'){
-    const makeActive = btn.textContent.trim() === 'Enable';
-    out.textContent = JSON.stringify(await post(`/api/cars/${id}/active`, {active: makeActive}), null, 2);
+  if(debugOn && lastDebug){
+    out.classList.remove('hidden');
+    out.textContent = JSON.stringify(lastDebug, null, 2);
+  }else{
+    out.classList.add('hidden');
+    out.textContent = '';
   }
 });
 
+function renderMine(cars){
+  myCars.innerHTML = '';
+  countPill.textContent = `${cars.length} car${cars.length === 1 ? '' : 's'}`;
+
+  for(const c of cars){
+    const card = document.createElement('div');
+    card.className = 'card section noShadow';
+
+    card.innerHTML = `
+      <div class="flexBetweenTopWrap">
+        <div>
+          <div class="fw950">${c.year} ${c.make} ${c.model}</div>
+          <div class="sub mt6">${c.pickup_location} • ${c.mileage} miles</div>
+        </div>
+        <div class="pill">${c.active ? 'Active' : 'Hidden'}</div>
+      </div>
+
+      <div class="row mt12">
+        <div class="pill">${money(c.price_per_day_cents)}/day</div>
+
+        <input class="input w110" data-id="${c.id}" placeholder="new $/day" />
+
+        <button class="btnOutline btnSm" data-action="price" data-id="${c.id}">Update</button>
+        <button class="btnOutline btnSm" data-action="toggle" data-id="${c.id}">
+          ${c.active ? 'Disable' : 'Enable'}
+        </button>
+
+        <a class="btnOutline btnSm btnLink" href="/car.html?id=${c.id}">View</a>
+      </div>
+    `;
+
+    myCars.appendChild(card);
+  }
+
+  if(!cars.length){
+    myCars.innerHTML = '<div class="sub">No cars yet. Create one above, then click “Load My Cars”.</div>';
+  }
+}
+
+async function loadMe(){
+  const r = await apiGet('/api/auth/me');
+  me = r.ok ? r.user : null;
+
+  if(!me){
+    mePill.textContent = 'Not logged in';
+    createBtn.disabled = true;
+    loadMineBtn.disabled = true;
+    return false;
+  }
+
+  mePill.textContent = 'Logged in: ' + me.display_name;
+  createBtn.disabled = false;
+  loadMineBtn.disabled = false;
+  return true;
+}
+
+async function loadMine(){
+  const r = await apiGet('/api/cars/mine/list');
+  if(!r.ok){
+    showToast('Load failed', r.error || 'Try again');
+    setDebug(r);
+    return;
+  }
+  clearDebug();
+  renderMine(r.cars || []);
+}
+
+// init
+const ok = await loadMe();
+if(ok) loadMine();
+
+createBtn.addEventListener('click', async () => {
+  if(!me){
+    showToast('Login required', 'Please login first.');
+    return;
+  }
+
+  const payload = {
+    title: title.value,
+    make: make.value,
+    model: model.value,
+    year: Number(year.value),
+    mileage: Number(mileage.value),
+    pickupLocation: loc.value,
+    pricePerDay: Number(price.value),
+  };
+
+  const r = await apiPost('/api/cars', payload);
+
+  if(!r.ok){
+    showToast('Create failed', r.error || 'Check inputs');
+    setDebug(r);
+    return;
+  }
+
+  clearDebug();
+  showToast('Listing created', `Car #${r.carId}`);
+
+  title.value = '';
+  make.value = '';
+  model.value = '';
+  year.value = '';
+  mileage.value = '';
+  price.value = '';
+  loadMine();
+});
+
+loadMineBtn.addEventListener('click', loadMine);
+
+myCars.addEventListener('click', async (e) => {
+  const btn = e.target.closest('button[data-action]');
+  if(!btn) return;
+
+  const id = Number(btn.dataset.id);
+  const action = btn.dataset.action;
+
+  if(action === 'price'){
+    const input = myCars.querySelector(`input[data-id="${id}"]`);
+    const val = Number(input.value);
+
+    const r = await apiPost(`/api/cars/${id}/price`, { pricePerDay: val });
+    if(!r.ok){
+      showToast('Update failed', r.error || 'Try again');
+      setDebug(r);
+      return;
+    }
+
+    clearDebug();
+    showToast('Price updated', `Car #${id}`);
+    loadMine();
+  }
+
+  if(action === 'toggle'){
+    const makeActive = btn.textContent.trim() === 'Enable';
+    const r = await apiPost(`/api/cars/${id}/active`, { active: makeActive });
+
+    if(!r.ok){
+      showToast('Update failed', r.error || 'Try again');
+      setDebug(r);
+      return;
+    }
+
+    clearDebug();
+    showToast(makeActive ? 'Enabled' : 'Disabled', `Car #${id}`);
+    loadMine();
+  }
+});
+
+function updateLink(){
+  const c = document.getElementById('msgCarId').value.trim();
+  const rId = document.getElementById('msgRenterId').value.trim();
+  document.getElementById('openMsg').href = `/messages.html?carId=${encodeURIComponent(c)}&other=${encodeURIComponent(rId)}`;
+}
 document.getElementById('msgCarId').addEventListener('input', updateLink);
 document.getElementById('msgRenterId').addEventListener('input', updateLink);
-function updateLink(){
-  const c = document.getElementById('msgCarId').value;
-  const rId = document.getElementById('msgRenterId').value;
-  document.getElementById('openMsg').href = `/messages.html?carId=${c}&other=${rId}`;
-}
 updateLink();
-</script></body></html>
+</script>
+</body>
+</html>

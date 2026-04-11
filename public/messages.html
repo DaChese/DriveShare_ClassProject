@@ -10,30 +10,31 @@
         <a href="/renter.html">Search</a>
         <a href="/owner.html">Owner</a>
         <a href="/notifications.html">Notifications</a>
+        <a href="/history.html">History</a>
       </div>
     </div>
   </div>
 
   <main class="wrap">
     <div class="card section">
-      <h1 style="font-size:22px;font-weight:950;">Messages</h1>
+      <h1 class="pageTitle">Messages</h1>
       <div class="sub">Simple in-app chat between renter and owner.</div>
 
-      <div class="row" style="margin-top:14px">
+      <div class="row mt14">
         <input class="input" id="carId" placeholder="car id"/>
         <input class="input" id="otherId" placeholder="other user id"/>
         <button class="btnOutline" id="loadBtn">Load thread</button>
       </div>
 
-      <div class="pill" id="threadTitle" style="margin-top:14px">Loading chat…</div>
-      <div id="thread" class="card section msgBox" style="margin-top:14px; box-shadow:none;"></div>
+      <div id="thread" class="card section msgBox mt14 noShadow"></div>
+      <div class="pill mt14" id="threadTitle">Loading chat…</div>
 
-      <div class="row" style="margin-top:14px">
-        <input class="input" id="body" placeholder="type a message..." style="flex:1; min-width:260px"/>
+      <div class="row mt14">
+        <input class="input flex1Min260" id="body" placeholder="type a message..."/>
         <button class="btn" id="sendBtn">Send</button>
       </div>
 
-      <pre id="out" style="margin-top:12px;display:none"></pre>
+      <pre id="out" class="mt12 hidden"></pre>
     </div>
   </main>
 
@@ -73,6 +74,8 @@ function renderMessages(msgs){
 }
 
 async function loadHeader(){
+  await loadHeader();
+
   const carId = Number(carIdEl.value);
   const otherId = Number(otherIdEl.value);
 
@@ -82,7 +85,7 @@ async function loadHeader(){
   }
 
   const car = await apiGet(`/api/cars/${carId}`);
-  const other = await apiGet(`/api/users/${otherId}`);
+  const other = await apiGet(`/api/users/${otherId}`);   // requires /api/users/:id route
   const meRes = await apiGet('/api/auth/me');
 
   const carName = car.ok
@@ -95,8 +98,6 @@ async function loadHeader(){
   threadTitle.textContent = `Chat: ${meName} ↔ ${otherName} | ${carName}`;
 }
 async function loadThread(){
-  await loadHeader();
-
   const carId = Number(carIdEl.value);
   const otherId = Number(otherIdEl.value);
   const r = await apiGet(`/api/messages/thread?carId=${carId}&otherUserId=${otherId}`);

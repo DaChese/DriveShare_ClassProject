@@ -24,6 +24,8 @@ async function main() {
   // light migrations (so you don't have to delete the sqlite file)
   await ensureColumn(db, "watches", "watch_start_date", "TEXT");
   await ensureColumn(db, "watches", "watch_end_date", "TEXT");
+  await ensureColumn(db, "messages", "is_read", "INTEGER NOT NULL DEFAULT 0");
+  await ensureColumn(db, "reviews", "reviewee_type", "TEXT NOT NULL DEFAULT 'user'");
 
   console.log("DB initialized / migrated.");
   await db.close();

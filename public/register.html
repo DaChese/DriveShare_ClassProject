@@ -1,5 +1,10 @@
 <!doctype html>
-<html><head><meta charset="utf-8"/><title>Register</title><link rel="stylesheet" href="/style.css"/></head>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Register</title>
+  <link rel="stylesheet" href="/style.css"/>
+</head>
 <body>
   <div class="topbar">
     <div class="topbarInner">
@@ -11,54 +16,81 @@
       </div>
     </div>
   </div>
+
   <main class="wrap">
-<div class="card section">
-  <h1 style="font-size:22px;font-weight:950;">Register</h1>
-  <div class="sub">Create an account and set 3 security questions.</div>
-  <div class="row" style="margin-top:14px">
-    <input class="input" id="display" placeholder="display name" />
-    <input class="input" id="email" placeholder="email" />
-    <input class="input" id="pw" placeholder="password" type="password" />
-  </div>
-  <div class="card section" style="margin-top:14px; box-shadow:none">
-    <div style="font-weight:950;">Security questions</div>
-    <div class="sub">Used for password recovery (CoR).</div>
-    <div class="row" style="margin-top:12px">
-      <input class="input" id="q1" placeholder="Question 1" style="flex:1;min-width:260px"/>
-      <input class="input" id="a1" placeholder="Answer 1" style="flex:1;min-width:200px"/>
+    <div class="card section">
+      <h1 class="pageTitle">Register</h1>
+      <div class="sub">Create an account and set 3 security questions.</div>
+
+      <div class="row mt14">
+        <input class="input" id="display" placeholder="display name" />
+        <input class="input" id="email" placeholder="email" />
+        <input class="input" id="pw" placeholder="password" type="password" />
+      </div>
+
+      <div class="card section mt14 noShadow">
+        <div class="fw950">Security questions</div>
+        <div class="sub mt6">Used for password recovery (CoR).</div>
+
+        <div class="row mt12">
+          <input class="input flex1Min260" id="q1" placeholder="Question 1" />
+          <input class="input flex1Min200" id="a1" placeholder="Answer 1" />
+        </div>
+
+        <div class="row mt10">
+          <input class="input flex1Min260" id="q2" placeholder="Question 2" />
+          <input class="input flex1Min200" id="a2" placeholder="Answer 2" />
+        </div>
+
+        <div class="row mt10">
+          <input class="input flex1Min260" id="q3" placeholder="Question 3" />
+          <input class="input flex1Min200" id="a3" placeholder="Answer 3" />
+        </div>
+
+        <div class="row mt12">
+          <button class="btn" id="regBtn">Create account</button>
+          <a class="btnOutline btnLink" href="/login.html">Already have an account?</a>
+        </div>
+
+        <pre id="out" class="mt12 hidden"></pre>
+      </div>
     </div>
-    <div class="row" style="margin-top:10px">
-      <input class="input" id="q2" placeholder="Question 2" style="flex:1;min-width:260px"/>
-      <input class="input" id="a2" placeholder="Answer 2" style="flex:1;min-width:200px"/>
-    </div>
-    <div class="row" style="margin-top:10px">
-      <input class="input" id="q3" placeholder="Question 3" style="flex:1;min-width:260px"/>
-      <input class="input" id="a3" placeholder="Answer 3" style="flex:1;min-width:200px"/>
-    </div>
-    <div class="row" style="margin-top:12px">
-      <button class="btn" id="regBtn">Create account</button>
-      <a class="btnOutline" href="/login.html" style="text-decoration:none;display:inline-flex;align-items:center;">Already have an account?</a>
-    </div>
-  </div>
-  <pre id="out" style="margin-top:12px"></pre>
-</div>
-</main>
+  </main>
+
   <script type="module">
-import { apiPost } from "./ui.js";
-const out = document.getElementById('out');
-document.getElementById('regBtn').addEventListener('click', async () => {
-  const payload = {
-    displayName: display.value,
-    email: email.value,
-    password: pw.value,
-    questions: [
-      {question: q1.value, answer: a1.value},
-      {question: q2.value, answer: a2.value},
-      {question: q3.value, answer: a3.value},
-    ]
-  };
-  const r = await apiPost('/api/auth/register', payload);
-  out.textContent = JSON.stringify(r, null, 2);
-});
-</script>
-</body></html>
+    import { apiPost, showToast } from "./ui.js";
+    const out = document.getElementById('out');
+
+    function showOut(obj){
+      out.classList.remove('hidden');
+      out.textContent = JSON.stringify(obj, null, 2);
+    }
+    function hideOut(){
+      out.classList.add('hidden');
+      out.textContent = '';
+    }
+
+    document.getElementById('regBtn').addEventListener('click', async () => {
+      const payload = {
+        displayName: display.value,
+        email: email.value,
+        password: pw.value,
+        questions: [
+          {question: q1.value, answer: a1.value},
+          {question: q2.value, answer: a2.value},
+          {question: q3.value, answer: a3.value},
+        ]
+      };
+
+      const r = await apiPost('/api/auth/register', payload);
+      if(r.ok){
+        hideOut();
+        showToast('Account created', 'You can login now');
+      } else {
+        showToast('Register failed', r.error || 'Check fields');
+        showOut(r);
+      }
+    });
+  </script>
+</body>
+</html>

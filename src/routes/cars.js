@@ -3,6 +3,7 @@ import { requireAuth } from "../middleware/auth.js";
 import CarListingBuilder from "../patterns/CarListingBuilder.js";
 import { notifyWatchers } from "../patterns/WatchNotifier.js";
 import { listBlocksAndBookings } from "../services/availability.js";
+import SearchMediator from "../patterns/SearchMediator.js";
 
 function normalizeISODate(s) {
   const t = String(s || "").trim();
@@ -35,44 +36,29 @@ function toCentsFromDollars(v) {
 
 export default function carRoutes(db) {
   const r = express.Router();
+  const searchMediator = new SearchMediator(db); // Mediator for search operations
 
   // Browse (no date filtering) - useful for homepage / "nearby" library
   // GET /api/cars/browse?location=detroit&maxPrice=120&limit=12
   r.get("/browse", async (req, res) => {
     const { location, maxPrice, limit } = req.query || {};
-    const loc = String(location || "").trim();
 
-    const lim = Math.max(1, Math.min(50, Number(limit || 12) || 12));
+    // Prepare criteria for mediator
+    const criteria = {
+      location: String(location || "").trim(),
+      maxPrice: maxPrice != null ? Number(maxPrice) : null,
+      limit: Math.max(1, Math.min(50, Number(limit || 12) || 12))
+    };
 
-    let where = "WHERE c.active = 1";
-    const params = [];
-
-    if (loc) {
-      where += " AND c.pickup_location LIKE ? COLLATE NOCASE";
-      params.push(`%${loc}%`);
+    // Validate criteria
+    const validation = searchMediator.validateCriteria(criteria);
+    if (!validation.ok) {
+      return res.status(400).json({ ok: false, error: validation.error });
     }
 
-    if (maxPrice != null && String(maxPrice).trim() !== "") {
-      const cents = toCentsFromDollars(maxPrice);
-      if (cents == null) {
-        return res.status(400).json({ ok: false, error: "Invalid maxPrice." });
-      }
-      where += " AND c.price_per_day_cents <= ?";
-      params.push(cents);
-    }
-
-    const rows = await db.all(
-      `
-      SELECT c.*
-      FROM cars c
-      ${where}
-      ORDER BY c.price_per_day_cents ASC
-      LIMIT ?
-      `,
-      [...params, lim]
-    );
-
-    return res.json({ ok: true, cars: rows });
+    // Execute browse using mediator
+    const cars = await searchMediator.browseCars(criteria);
+    return res.json({ ok: true, cars });
   });
 
   // Search (Location + date range + optional max price)
@@ -81,63 +67,25 @@ export default function carRoutes(db) {
   //  - validates dates
   r.get("/search", async (req, res) => {
     const { location, start, end, maxPrice } = req.query || {};
-    const loc = String(location || "").trim();
-    const startDate = normalizeISODate(start);
-    const endDate = normalizeISODate(end);
 
-    if (!loc || !startDate || !endDate) {
-      return res.status(400).json({ ok: false, error: "Need location, start, end." });
+    // Prepare criteria for mediator
+    const criteria = {
+      location: String(location || "").trim(),
+      startDate: normalizeISODate(start),
+      endDate: normalizeISODate(end),
+      maxPrice: maxPrice != null ? Number(maxPrice) : null,
+      requireLocation: true // Location required for search
+    };
+
+    // Validate criteria using mediator
+    const validation = searchMediator.validateCriteria(criteria);
+    if (!validation.ok) {
+      return res.status(400).json({ ok: false, error: validation.error });
     }
 
-    if (!isValidISODate(startDate) || !isValidISODate(endDate)) {
-      return res.status(400).json({ ok: false, error: "Dates must be YYYY-MM-DD." });
-    }
-
-    if (Date.parse(endDate) <= Date.parse(startDate)) {
-      return res.status(400).json({ ok: false, error: "end must be after start." });
-    }
-
-    const likeLoc = `%${loc}%`;
-    const params = [likeLoc];
-
-    let maxPriceClause = "";
-    if (maxPrice != null && String(maxPrice).trim() !== "") {
-      const cents = toCentsFromDollars(maxPrice);
-      if (cents == null) {
-        return res.status(400).json({ ok: false, error: "Invalid maxPrice." });
-      }
-      maxPriceClause = " AND c.price_per_day_cents <= ? ";
-      params.push(cents);
-    }
-
-    // overlap params
-    params.push(startDate, endDate, startDate, endDate);
-
-    // Exclude cars with overlapping pending/confirmed bookings OR manual blocks
-    const rows = await db.all(
-      `
-      SELECT c.*
-      FROM cars c
-      WHERE c.active = 1
-        AND c.pickup_location LIKE ? COLLATE NOCASE
-        ${maxPriceClause}
-        AND NOT EXISTS (
-          SELECT 1 FROM bookings b
-          WHERE b.car_id = c.id
-            AND b.status IN ('pending','confirmed')
-            AND (? < b.end_date) AND (? > b.start_date)
-        )
-        AND NOT EXISTS (
-          SELECT 1 FROM availability_blocks ab
-          WHERE ab.car_id = c.id
-            AND (? < ab.end_date) AND (? > ab.start_date)
-        )
-      ORDER BY c.price_per_day_cents ASC
-      `,
-      params
-    );
-
-    return res.json({ ok: true, cars: rows });
+    // Execute search using mediator
+    const cars = await searchMediator.searchCars(criteria);
+    return res.json({ ok: true, cars });
   });
 
   // Owner: list my cars

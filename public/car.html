@@ -14,6 +14,7 @@
         <a href="/owner.html">Owner</a>
         <a href="/notifications.html">Notifications</a>
         <a href="/messages.html">Messages</a>
+        <a href="/history.html">History</a>
       </div>
     </div>
   </div>
@@ -27,39 +28,39 @@
           <div class="imgCredit" id="heroCredit"></div>
         </div>
 
-        <div style="margin-top:14px">
-          <h1 id="carTitle" style="font-size:24px;font-weight:950;">Loading...</h1>
-          <div id="carMeta" class="sub" style="margin-top:6px"></div>
+        <div class="mt14">
+          <h1 id="carTitle" class="pageTitleLg">Loading...</h1>
+          <div id="carMeta" class="sub mt6"></div>
         </div>
 
-        <div class="card section" style="margin-top:14px; box-shadow:none">
-          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+        <div class="card section mt14 noShadow">
+          <div class="flexBetweenTopWrap">
             <div>
               <div class="sub">Host</div>
-              <div id="hostName" style="font-weight:950;margin-top:6px">—</div>
+              <div id="hostName" class="fw950 mt6">—</div>
             </div>
-            <a id="msgOwner" class="btnOutline" href="/messages.html" style="text-decoration:none;display:inline-flex;align-items:center;">Message owner</a>
+            <a id="msgOwner" class="btnOutline btnLink" href="/messages.html">Message owner</a>
           </div>
-          <div id="meInfo" class="sub" style="margin-top:10px"></div>
+          <div id="meInfo" class="sub mt10"></div>
         </div>
 
-        <div class="card section" style="margin-top:14px; box-shadow:none">
-          <div style="font-weight:950;">Watch this car</div>
-          <div class="sub" style="margin-top:6px">Notify me when price is low enough and my dates are open.</div>
-          <div class="row" style="margin-top:12px">
+        <div class="card section mt14 noShadow">
+          <div class="fw950">Watch this car</div>
+          <div class="sub mt6">Notify me when price is low enough and my dates are open.</div>
+          <div class="row mt12">
             <input class="input" id="watchMax" placeholder="Max $/day (optional)" />
             <input class="input" id="watchStart" type="date" />
             <input class="input" id="watchEnd" type="date" />
             <button class="btnOutline" id="watchBtn">Save watch</button>
           </div>
-          <pre id="watchOut" style="margin-top:10px;display:none"></pre>
+          <pre id="watchOut" class="mt10 hidden"></pre>
         </div>
 
-        <div class="card section" style="margin-top:14px; box-shadow:none">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+        <div class="card section mt14 noShadow">
+          <div class="flexBetweenTopWrap">
             <div>
-              <div style="font-weight:950;">Availability</div>
-              <div class="sub" style="margin-top:6px">Next 30 days. Green = open, red = blocked.</div>
+              <div class="fw950">Availability</div>
+              <div class="sub mt6">Next 30 days. Green = open, red = blocked.</div>
             </div>
             <button class="btnOutline" id="reloadCalBtn">Refresh</button>
           </div>
@@ -67,52 +68,52 @@
           <div class="calGrid" id="calendar"></div>
         </div>
 
-        <div class="card section" id="ownerTools" style="margin-top:14px; box-shadow:none; display:none">
-          <div style="font-weight:950;">Owner tools: block out dates</div>
-          <div class="sub" style="margin-top:6px">Use blocks for maintenance or personal use.</div>
+        <div class="card section mt14 noShadow hidden" id="ownerTools">
+          <div class="fw950">Owner tools: block out dates</div>
+          <div class="sub mt6">Use blocks for maintenance or personal use.</div>
 
-          <div class="row" style="margin-top:12px">
+          <div class="row mt12">
             <input class="input" id="blkStart" type="date" />
             <input class="input" id="blkEnd" type="date" />
-            <input class="input" id="blkReason" placeholder="Reason (optional)" style="min-width:260px" />
+            <input class="input min260" id="blkReason" placeholder="Reason (optional)" />
             <button class="btnOutline" id="addBlockBtn">Add block</button>
           </div>
 
-          <div id="blocksList" class="gridCars" style="margin-top:14px"></div>
+          <div id="blocksList" class="gridCars mt14"></div>
         </div>
       </section>
 
       <aside class="card section stickyCard">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <div style="font-weight:950;">Book</div>
+        <div class="flexBetweenWrap">
+          <div class="fw950">Book</div>
           <div class="pill" id="pricePill">—</div>
         </div>
 
-        <div class="sub" style="margin-top:8px">Daily rate × trip length.</div>
+        <div class="sub mt8">Daily rate × trip length.</div>
 
-        <div class="row" style="margin-top:12px">
+        <div class="row mt12">
           <input class="input" id="start" type="date"/>
           <input class="input" id="end" type="date"/>
         </div>
 
-        <div class="card section" style="margin-top:12px; box-shadow:none">
+        <div class="card section mt12 noShadow">
           <div class="sub">Quote</div>
-          <div id="quote" style="font-weight:950;margin-top:6px">—</div>
+          <div id="quote" class="fw950 mt6">—</div>
         </div>
 
-        <div class="row" style="margin-top:12px">
+        <div class="row mt12">
           <button class="btn" id="bookBtn">Book</button>
           <button class="btnOutline" id="cancelBtn">Cancel</button>
         </div>
 
-        <div class="card section" style="margin-top:12px; box-shadow:none">
-          <div style="font-weight:950;">Payment (simulated)</div>
-          <div class="sub" style="margin-top:6px">Pay to confirm booking.</div>
-          <div class="row" style="margin-top:12px">
+        <div class="card section mt12 noShadow">
+          <div class="fw950">Payment (simulated)</div>
+          <div class="sub mt6">Pay to confirm booking.</div>
+          <div class="row mt12">
             <input class="input" id="bookingId" placeholder="booking id"/>
             <button class="btnOutline" id="payBtn">Pay</button>
           </div>
-          <pre id="out" style="margin-top:10px"></pre>
+          <pre id="out" class="mt10"></pre>
         </div>
       </aside>
     </div>
@@ -211,7 +212,7 @@
       msgOwner.href = `/messages.html?carId=${car.id}&other=${car.owner_id}`;
 
       if(me && me.id === car.owner_id){
-        ownerTools.style.display = 'block';
+        ownerTools.classList.remove('hidden');
       }
 
       updateQuote();
@@ -251,7 +252,7 @@
         calendar.appendChild(cell);
       }
 
-      if(ownerTools.style.display !== 'none'){
+      if(!ownerTools.classList.contains('hidden')){
         blocksList.innerHTML = '';
         if(!r.blocks.length){
           blocksList.innerHTML = '<div class="sub">No manual blocks.</div>';
@@ -261,12 +262,12 @@
             div.className = 'card';
             div.innerHTML = `
               <div class="section">
-                <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
-                  <div style="font-weight:950;">Block #${b.id}</div>
+                <div class="flexBetweenTopWrap">
+                  <div class="fw950">Block #${b.id}</div>
                   <div class="pill">${b.start_date} → ${b.end_date}</div>
                 </div>
-                <div class="sub" style="margin-top:6px">${b.reason || ''}</div>
-                <div class="row" style="margin-top:12px">
+                <div class="sub mt6">${b.reason || ''}</div>
+                <div class="row mt12">
                   <button class="btnDanger" data-bid="${b.id}">Delete</button>
                 </div>
               </div>

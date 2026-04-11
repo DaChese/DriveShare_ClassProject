@@ -13,28 +13,29 @@
         <a href="/owner.html">Owner</a>
         <a href="/notifications.html">Notifications</a>
         <a href="/messages.html">Messages</a>
+        <a href="/history.html">History</a>
       </div>
     </div>
   </div>
 
   <main class="wrap">
     <div class="card section">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+      <div class="flexBetweenTopWrap">
         <div>
-          <h1 style="font-size:22px;font-weight:950;">Search</h1>
+          <h1 class="pageTitle">Search</h1>
           <div class="sub">Location + dates are required. Max price is optional.</div>
         </div>
         <div class="pill" id="mePill">Not logged in</div>
       </div>
 
-      <div class="searchBar searchBarWide" style="margin-top:14px">
+      <div class="searchBar searchBarWide mt14">
         <input class="input" id="location" placeholder="Pickup location" />
         <input class="input" id="start" type="date" />
         <input class="input" id="end" type="date" />
 
         <div class="rangeWrap">
           <input class="range" id="maxPrice" type="range" min="20" max="300" step="5" value="300" />
-          <input class="input" id="maxPriceNum" type="number" min="20" max="300" step="5" placeholder="Any" style="width:110px" />
+          <input class="input w110" id="maxPriceNum" type="number" min="20" max="300" step="5" placeholder="Any" />
           <div class="pill" id="maxPriceText">Any price</div>
         </div>
 
@@ -58,9 +59,9 @@
 
         <div class="field">
           <div class="label">Quick actions</div>
-          <div class="row" style="margin-top:8px">
-            <a class="btnOutline" href="/login.html" style="text-decoration:none;display:inline-flex;align-items:center;">Login</a>
-            <a class="btnOutline" href="/register.html" style="text-decoration:none;display:inline-flex;align-items:center;">Register</a>
+          <div class="row mt8">
+            <a class="btnOutline btnLink" href="/login.html">Login</a>
+            <a class="btnOutline btnLink" href="/register.html">Register</a>
           </div>
         </div>
 
@@ -71,7 +72,7 @@
       </aside>
 
       <section>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div class="flexBetweenWrap mb10">
           <div class="sub" id="countText">0 cars</div>
         </div>
 
@@ -120,197 +121,213 @@
         const max = Number(this.maxEl.max);
 
         if(v >= max){
-          this.maxNumEl.value = "";
-          this.maxText.textContent = "Any price";
-        }else{
+          this.maxText.textContent = 'Any price';
+          this.maxNumEl.value = '';
+        } else {
+          this.maxText.textContent = `Up to $${v}`;
           this.maxNumEl.value = String(v);
-          this.maxText.textContent = `Max $${v}/day`;
         }
       }
 
       setFromNumber(){
-        const raw = this.maxNumEl.value.trim();
+        const raw = String(this.maxNumEl.value || '').trim();
         const max = Number(this.maxEl.max);
 
-        if(raw === ""){
+        if(raw === ''){
           this.maxEl.value = String(max);
-          this.maxText.textContent = "Any price";
+          this.maxText.textContent = 'Any price';
           return;
         }
 
-        let v = Number(raw);
-        if(!Number.isFinite(v)) v = max;
-        v = Math.max(Number(this.maxEl.min), Math.min(max, v));
-
-        this.maxEl.value = String(v);
-
-        if(v >= max){
-          this.maxNumEl.value = "";
-          this.maxText.textContent = "Any price";
-        }else{
-          this.maxText.textContent = `Max $${v}/day`;
+        const n = Number(raw);
+        if(!Number.isFinite(n) || Number.isNaN(n) || n >= max){
+          this.maxEl.value = String(max);
+          this.maxText.textContent = 'Any price';
+          return;
         }
+
+        this.maxEl.value = String(n);
+        this.maxText.textContent = `Up to $${n}`;
       }
 
-      getMaxPriceParam(){
-        const raw = this.maxNumEl.value.trim();
-        if(raw === "") return "";
-        const v = Number(raw);
-        if(!Number.isFinite(v)) return "";
-        if(v >= Number(this.maxEl.max)) return "";
-        return String(v);
+      maxPriceOrNull(){
+        const raw = String(this.maxNumEl.value || '').trim();
+        if(raw === '') return null;
+
+        const n = Number(raw);
+        const max = Number(this.maxEl.max);
+        if(!Number.isFinite(n) || Number.isNaN(n) || n >= max) return null;
+        return n;
       }
 
       syncEndMin(){
-        const s = this.startEl.value;
-        if(s) this.endEl.min = s;
-        if(this.endEl.value && this.endEl.value < this.endEl.min){
+        if(!this.startEl.value) return;
+        this.endEl.min = addDaysISO(this.startEl.value, 1);
+        if(this.endEl.value && this.endEl.value <= this.startEl.value){
           this.endEl.value = this.endEl.min;
         }
       }
 
-      async initFromQuery(){
-        const q = readQueryParams();
-        this.locEl.value = q.location || '';
-
-        // default dates so users don’t have to type
+      setDefaults(){
         const t = todayISO();
-        this.startEl.min = t;
-        this.endEl.min = t;
+        const s = addDaysISO(t, 1);
+        const e = addDaysISO(s, 3);
 
-        this.startEl.value = q.start || addDaysISO(t, 1);
-        this.endEl.value = q.end || addDaysISO(this.startEl.value, 2);
+        if(!this.startEl.value) this.startEl.value = s;
+        if(!this.endEl.value) this.endEl.value = e;
+
         this.syncEndMin();
-
-        if(q.maxPrice){
-          const v = Math.max(Number(this.maxEl.min), Math.min(Number(this.maxEl.max), Number(q.maxPrice)));
-          if(Number.isFinite(v)){
-            this.maxEl.value = String(v);
-            this.maxNumEl.value = String(v);
-          }
-        }else{
-          this.maxEl.value = String(this.maxEl.max);
-          this.maxNumEl.value = "";
-        }
+        this.maxEl.value = this.maxEl.max;
         this.setFromRange();
+      }
 
+      async loadMe(){
         const me = await apiGet('/api/auth/me');
         this.mePill.textContent = me.ok ? ('Logged in: ' + me.user.display_name) : 'Not logged in';
-
-        if(this.locEl.value){
-          await this.search(false);
-        }
       }
 
-      sortCars(){
-        const v = this.sortEl.value;
-        const out = [...this.lastCars];
-        if(v === 'priceAsc') out.sort((a,b)=>a.price_per_day_cents-b.price_per_day_cents);
-        if(v === 'priceDesc') out.sort((a,b)=>b.price_per_day_cents-a.price_per_day_cents);
-        if(v === 'mileageAsc') out.sort((a,b)=>a.mileage-b.mileage);
-        if(v === 'yearDesc') out.sort((a,b)=>b.year-a.year);
-        return out;
-      }
+      cardHtml(car, photo, days){
+        const title = `${car.year} ${car.make} ${car.model}`;
+        const meta = `${car.pickup_location} • ${car.mileage} miles`;
+        const price = `${money(car.price_per_day_cents)}/day`;
+        const total = `${money(car.price_per_day_cents * days)}`;
 
-      render(){
-        const cars = this.sortCars();
-        this.grid.innerHTML = '';
-        this.countText.textContent = cars.length + (cars.length === 1 ? ' car' : ' cars');
+        const photoHtml = photo ? `
+          <img class="photo isLoaded" src="${photo.regular}" alt="${title}"/>
+          <div class="imgCredit">
+            Photo by <a href="${photo.photographerLink}" target="_blank" rel="noreferrer">${photo.photographerName}</a> on
+            <a href="${photo.unsplashLink}" target="_blank" rel="noreferrer">Unsplash</a>
+          </div>
+        ` : "Car";
 
-        if(!cars.length){
-          this.grid.innerHTML = '<div class="sub">No cars found for that search.</div>';
-          return;
-        }
-
-        const s = this.startEl.value.trim();
-        const e = this.endEl.value.trim();
-
-        for(const c of cars){
-          const d = (s && e) ? daysBetween(s,e) : 1;
-          const estTotal = d * Number(c.price_per_day_cents);
-
-          const card = document.createElement('div');
-          card.className = 'card carCard clickCard';
-
-          card.innerHTML = `
-            <div class="carImg">
-              <img class="photo" alt="${c.year} ${c.make} ${c.model}"
-                src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" />
-              <div class="imgCredit" id="credit-${c.id}"></div>
-            </div>
-
+        return `
+          <div class="card carCard clickCard" data-id="${car.id}">
+            <div class="carImg">${photoHtml}</div>
             <div class="carBody">
-              <div class="carTitle">${c.year} ${c.make} ${c.model}</div>
-              <div class="carMeta">${c.pickup_location} • ${c.mileage} miles</div>
+              <div class="carTitle">${title}</div>
+              <div class="carMeta">${meta}</div>
+
+              <div class="badgeRow">
+                <div class="badgeSm">${price}</div>
+                <div class="badgeSm">${days} day${days === 1 ? '' : 's'}</div>
+                <div class="badgeSm">Total: ${total}</div>
+              </div>
 
               <div class="carBottom">
-                <div>
-                  <div class="price">${money(c.price_per_day_cents)}/day</div>
-                  <div class="sub">${money(estTotal)} total</div>
+                <div class="sub">Car #${car.id}</div>
+                <div class="rightActions">
+                  <a class="smallLink" href="/car.html?id=${car.id}">View</a>
                 </div>
-                <a class="smallLink" href="/car.html?id=${c.id}&start=${encodeURIComponent(s)}&end=${encodeURIComponent(e)}">View</a>
               </div>
             </div>
-          `;
-
-          card.addEventListener('click', (ev) => {
-            if(ev.target.closest('a')) return;
-            location.href = `/car.html?id=${c.id}&start=${encodeURIComponent(s)}&end=${encodeURIComponent(e)}`;
-          });
-
-          this.grid.appendChild(card);
-
-          const img = card.querySelector("img.photo");
-          const credit = card.querySelector(`#credit-${c.id}`);
-
-          getUnsplashPhotoForCar(c).then((photo) => {
-            if(!photo || !photo.small) return;
-
-            img.src = photo.small;
-            img.onload = () => img.classList.add("isLoaded");
-
-            credit.innerHTML =
-              `Photo by <a href="${photo.photographerLink}" target="_blank" rel="noreferrer">${photo.photographerName}</a>
-               on <a href="${photo.unsplashLink}" target="_blank" rel="noreferrer">Unsplash</a>`;
-          }).catch(()=>{});
-        }
+          </div>
+        `;
       }
 
-      async search(pushUrl=true){
+      sortCars(cars){
+        const mode = this.sortEl.value;
+
+        const sorted = [...cars];
+        if(mode === 'priceAsc') sorted.sort((a,b)=>a.price_per_day_cents - b.price_per_day_cents);
+        if(mode === 'priceDesc') sorted.sort((a,b)=>b.price_per_day_cents - a.price_per_day_cents);
+        if(mode === 'mileageAsc') sorted.sort((a,b)=>a.mileage - b.mileage);
+        if(mode === 'yearDesc') sorted.sort((a,b)=>b.year - a.year);
+
+        return sorted;
+      }
+
+      updateUrl(){
+        const max = this.maxPriceOrNull();
+        const href = setQueryParams('/renter.html', {
+          location: this.locEl.value.trim(),
+          start: this.startEl.value,
+          end: this.endEl.value,
+          maxPrice: max == null ? '' : max
+        });
+        history.replaceState(null, '', href);
+      }
+
+      async search(updateUrl){
         const loc = this.locEl.value.trim();
-        const start = this.startEl.value.trim();
-        const end = this.endEl.value.trim();
-        const maxPriceParam = this.getMaxPriceParam();
+        const start = this.startEl.value;
+        const end = this.endEl.value;
+
+        if(updateUrl) this.updateUrl();
 
         if(!loc || !start || !end){
-          showToast('Missing search fields', 'Location, start, and end are required');
+          showToast('Missing fields', 'Enter location + dates');
           return;
         }
 
-        if(pushUrl){
-          history.replaceState({}, '', setQueryParams('/renter.html', {
-            location: loc, start, end, maxPrice: maxPriceParam
-          }));
-        }
+        const max = this.maxPriceOrNull();
+        const url = '/api/cars/search?location=' + encodeURIComponent(loc) +
+                    '&start=' + encodeURIComponent(start) +
+                    '&end=' + encodeURIComponent(end) +
+                    (max == null ? '' : ('&maxPrice=' + encodeURIComponent(max)));
 
-        const params = new URLSearchParams({ location: loc, start, end });
-        if(maxPriceParam) params.set('maxPrice', maxPriceParam);
-
-        const r = await apiGet('/api/cars/search?' + params.toString());
+        const r = await apiGet(url);
         if(!r.ok){
+          showToast('Search failed', r.error || 'Try again');
           this.lastCars = [];
           this.render();
-          showToast('Search error', r.error || 'Try again');
           return;
         }
 
         this.lastCars = r.cars || [];
         this.render();
       }
+
+      async render(){
+        const cars = this.sortCars(this.lastCars);
+        this.grid.innerHTML = '';
+
+        this.countText.textContent = `${cars.length} car${cars.length === 1 ? '' : 's'}`;
+
+        if(!cars.length){
+          this.grid.innerHTML = '<div class="sub">No cars found for that search.</div>';
+          return;
+        }
+
+        const days = Math.max(1, daysBetween(this.startEl.value, this.endEl.value));
+        const photos = await Promise.all(cars.map(c => getUnsplashPhotoForCar(c).catch(()=>null)));
+
+        this.grid.innerHTML = cars.map((c,i)=> this.cardHtml(c, photos[i], days)).join('');
+
+        this.grid.querySelectorAll('.clickCard').forEach(el=>{
+          el.addEventListener('click', (e)=>{
+            const a = e.target.closest('a');
+            if(a) return;
+            location.href = '/car.html?id=' + encodeURIComponent(el.dataset.id);
+          });
+        });
+      }
+
+      initFromQuery(){
+        const p = readQueryParams();
+        if(p.location) this.locEl.value = p.location;
+        if(p.start) this.startEl.value = p.start;
+        if(p.end) this.endEl.value = p.end;
+
+        if(p.maxPrice){
+          this.maxNumEl.value = p.maxPrice;
+          this.setFromNumber();
+        } else {
+          this.maxEl.value = this.maxEl.max;
+          this.setFromRange();
+        }
+
+        this.syncEndMin();
+      }
     }
 
-    const ui = new SearchMediator();
-    ui.initFromQuery();
+    const m = new SearchMediator();
+    m.setDefaults();
+    m.initFromQuery();
+    await m.loadMe();
+
+    if(m.locEl.value.trim() && m.startEl.value && m.endEl.value){
+      m.search(false);
+    }
   </script>
 </body>
 </html>

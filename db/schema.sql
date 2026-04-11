@@ -90,6 +90,7 @@ CREATE TABLE IF NOT EXISTS messages (
   renter_id INTEGER NOT NULL,
   sender_id INTEGER NOT NULL,
   body TEXT NOT NULL,
+  is_read INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE,
   FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -107,6 +108,20 @@ CREATE TABLE IF NOT EXISTS payments (
   FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
   FOREIGN KEY (payer_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (payee_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS reviews (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  booking_id INTEGER NOT NULL,
+  reviewer_id INTEGER NOT NULL,
+  reviewee_type TEXT NOT NULL DEFAULT 'user',  -- 'user' or 'car'
+  reviewee_id INTEGER NOT NULL,  -- user_id if reviewee_type='user', car_id if 'car'
+  rating INTEGER NOT NULL,
+  comment TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(booking_id, reviewer_id),
+  FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+  FOREIGN KEY (reviewer_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_bookings_car_dates ON bookings(car_id, start_date, end_date, status);

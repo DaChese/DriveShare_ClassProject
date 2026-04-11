@@ -5,13 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "node server.js",
-    "initdb": "node scripts/init_db.js"
+    "initdb": "node scripts/init_db.js",
+    "test:edge": "node edge_case_tests.js",
+    "test": "node test_implementations.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.6",
     "dotenv": "^17.4.1",
     "express": "^4.19.2",
+    "node-fetch": "^3.3.2",
+    "nodemailer": "^6.9.8",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
     "uuid": "^9.0.1"

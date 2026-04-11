@@ -13,26 +13,32 @@
   </div>
   <main class="wrap">
 <div class="card section">
-  <h1 style="font-size:22px;font-weight:950;">Login</h1>
+  <h1 class="pageTitle">Login</h1>
   <div class="sub">Log in to book, watch, message, and pay.</div>
-  <div class="row" style="margin-top:14px">
+  <div class="row mt14">
     <input class="input" id="email" placeholder="email" />
     <input class="input" id="pw" placeholder="password" type="password" />
     <button class="btn" id="loginBtn">Login</button>
     <button class="btnOutline" id="logoutBtn">Logout</button>
-    <a class="btnOutline" href="/recover.html" style="text-decoration:none;display:inline-flex;align-items:center;">Forgot password?</a>
+    <a class="btnOutline btnLink" href="/recover.html">Forgot password?</a>
   </div>
-  <pre id="out" style="margin-top:12px"></pre>
+  <pre id="out" class="mt12 hidden"></pre>
 </div>
 </main>
   <script type="module">
-import { apiPost } from "./ui.js";
+import { apiPost, showToast } from "./ui.js";
 const out = document.getElementById('out');
+function showOut(obj){ out.classList.remove('hidden'); out.textContent = JSON.stringify(obj,null,2); }
+function hideOut(){ out.classList.add('hidden'); out.textContent=''; }
 document.getElementById('loginBtn').addEventListener('click', async () => {
-  out.textContent = JSON.stringify(await apiPost('/api/auth/login', {email: email.value, password: pw.value}), null, 2);
+  const r = await apiPost('/api/auth/login', {email: email.value, password: pw.value});
+  if(r.ok){ hideOut(); showToast('Logged in'); }
+  else { showToast('Login failed', r.error || 'Check credentials'); showOut(r); }
 });
 document.getElementById('logoutBtn').addEventListener('click', async () => {
-  out.textContent = JSON.stringify(await apiPost('/api/auth/logout', {}), null, 2);
+  const r = await apiPost('/api/auth/logout', {});
+  if(r.ok){ hideOut(); showToast('Logged out'); }
+  else { showToast('Logout failed', r.error || 'Try again'); showOut(r); }
 });
 </script>
 </body></html>

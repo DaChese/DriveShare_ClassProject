@@ -10,15 +10,16 @@
         <a href="/renter.html">Search</a>
         <a href="/owner.html">Owner</a>
         <a href="/messages.html">Messages</a>
+        <a href="/history.html">History</a>
       </div>
     </div>
   </div>
 
   <main class="wrap">
     <div class="card section">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+      <div class="flexBetweenTopWrap">
         <div>
-          <h1 style="font-size:22px;font-weight:950;">Notifications</h1>
+          <h1 class="pageTitle">Notifications</h1>
           <div class="sub">Watch updates, booking updates, payments, and messages.</div>
         </div>
         <div class="row">
@@ -27,8 +28,8 @@
         </div>
       </div>
 
-      <div id="list" class="gridCars" style="margin-top:14px"></div>
-      <pre id="out" style="margin-top:12px;display:none"></pre>
+      <div id="list" class="gridCars mt14"></div>
+      <pre id="out" class="mt12 hidden"></pre>
     </div>
   </main>
 
@@ -45,13 +46,13 @@ function render(items){
     div.className = 'card';
     div.innerHTML = `
       <div class="section">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
-          <div style="font-weight:950;">${n.type.toUpperCase()}</div>
+        <div class="flexBetweenTopWrap">
+          <div class="fw950">${n.type.toUpperCase()}</div>
           <div class="pill">${n.is_read ? 'Read' : 'New'}</div>
         </div>
-        <div class="sub" style="margin-top:6px">${n.created_at}</div>
-        <div style="margin-top:10px">${n.text}</div>
-        <div class="row" style="margin-top:12px">
+        <div class="sub mt6">${n.created_at}</div>
+        <div class="mt10">${n.text}</div>
+        <div class="row mt12">
           <button class="btnOutline" data-id="${n.id}">Mark read</button>
         </div>
       </div>
