@@ -111,8 +111,8 @@ function render(items){
           <div class="sub mt6">${n.created_at}</div>
           <div class="mt10">From <strong>${senderName}</strong> about <strong>${carName}</strong></div>
           <div class="row mt12">
-            <a class="btn msgLink" href="/messages.html?carId=${carId}&other=${fromUserId}">Open thread</a>
-            <button class="btnOutline readBtn" data-id="${n.id}">Mark read</button>
+            <button type="button" class="btn msgBtn" data-car-id="${carId}" data-user-id="${fromUserId}">Open thread</button>
+            <button type="button" class="btnOutline readBtn" data-id="${n.id}">Mark read</button>
           </div>
         </div>
       `;
@@ -147,6 +147,15 @@ document.getElementById('loadBtn').addEventListener('click', load);
 
 // Click handlers for message buttons //////
 list.addEventListener('click', async (e) => {
+  // Open thread button ////
+  const msgBtn = e.target.closest('button.msgBtn');
+  if(msgBtn) {
+    const carId = msgBtn.dataset.carId;
+    const userId = msgBtn.dataset.userId;
+    window.location.href = `/messages.html?carId=${carId}&other=${userId}`;
+    return;
+  }
+
   // Mark read button ////
   const readBtn = e.target.closest('button.readBtn');
   if(readBtn) {
