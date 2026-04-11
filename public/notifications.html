@@ -110,6 +110,7 @@ function render(items){
           </div>
           <div class="sub mt6">${n.created_at}</div>
           <div class="mt10">From <strong>${senderName}</strong> about <strong>${carName}</strong></div>
+          <div class="sub mt6">Car ID: <strong>${carId}</strong> · User ID: <strong>${fromUserId}</strong></div>
           <div class="row mt12">
             <button type="button" class="btn msgBtn" data-car-id="${carId}" data-user-id="${fromUserId}">Open thread</button>
             <button type="button" class="btnOutline readBtn" data-id="${n.id}">Mark read</button>
