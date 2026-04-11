@@ -88,15 +88,40 @@ pre{
   display:flex;
   gap:10px;
   align-items:center;
-  flex-wrap:wrap;
+  flex-wrap:nowrap;
+  overflow-x:auto;
+  min-width:0;
+}
+
+.topbarMeta{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-shrink:0;
+}
+
+.userBadge{
+  display:inline-flex;
+  align-items:center;
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  background:#fff;
+  color:var(--muted);
+  font-weight:700;
+  white-space:nowrap;
 }
 
 .navLinks a{
+  display:inline-flex;
+  justify-content:center;
   text-decoration:none;
   color:var(--muted);
   font-weight:800;
   padding:8px 10px;
+  min-width:100px;
   border-radius:10px;
+  white-space:nowrap;
 }
 
 .navLinks a:hover{
