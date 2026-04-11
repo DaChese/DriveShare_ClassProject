@@ -148,9 +148,10 @@ document.getElementById('loadBtn').addEventListener('click', load);
 // Click handlers for message buttons //////
 list.addEventListener('click', async (e) => {
   // Open chat button //
-  if(e.target.classList.contains('msgBtn')) {
-    const carId = e.target.dataset.carId;
-    const userId = e.target.dataset.userId;
+  const msgBtn = e.target.closest('button.msgBtn');
+  if(msgBtn) {
+    const carId = msgBtn.dataset.carId;
+    const userId = msgBtn.dataset.userId;
     window.location.href = `/messages.html?carId=${carId}&other=${userId}`;
     return;
   }
