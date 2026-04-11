@@ -1,4 +1,11 @@
 
+// =============================================
+// FILE: auth.js
+// Authentication routes (register, login, logout, profile, recovery)
+// Created: 2024-12-19
+// Updated: 2024-12-19
+// =============================================
+
 import express from "express";
 import bcrypt from "bcryptjs";
 import SessionManager from "../patterns/SessionManager.js";
@@ -7,6 +14,14 @@ import { buildRecoveryChain } from "../patterns/PasswordRecoveryChain.js";
 export default function authRoutes(db) {
   const r = express.Router();
 
+  // =============================================
+  // REGISTER ENDPOINT
+  // =============================================
+
+  // POST /auth/register
+  // Creates new user account with security questions
+  // Business rules: email unique, 3 security questions required
+  // DB side-effects: inserts user, inserts 3 security questions, creates session
   r.post("/register", async (req, res) => {
     const { email, password, displayName, questions } = req.body || {};
     if (!email || !password || !displayName) return res.status(400).json({ ok: false, error: "Missing fields." });
@@ -42,6 +57,14 @@ export default function authRoutes(db) {
     }
   });
 
+  // =============================================
+  // LOGIN ENDPOINT
+  // =============================================
+
+  // POST /auth/login
+  // Validates credentials and creates session
+  // Business rules: valid email/password required
+  // DB side-effects: creates session on success
   r.post("/login", async (req, res) => {
     const { email, password } = req.body || {};
     const row = await db.get("SELECT id, password_hash FROM users WHERE email = ?", [String(email).toLowerCase()]);
@@ -55,6 +78,13 @@ export default function authRoutes(db) {
     return res.json({ ok: true });
   });
 
+  // =============================================
+  // LOGOUT ENDPOINT
+  // =============================================
+
+  // POST /auth/logout
+  // Destroys user session
+  // DB side-effects: removes session
   r.post("/logout", (req, res) => {
     const sid = req.cookies.sid;
     if (sid) SessionManager.instance().destroySession(sid);
@@ -62,6 +92,13 @@ export default function authRoutes(db) {
     return res.json({ ok: true });
   });
 
+  // =============================================
+  // PROFILE ENDPOINT
+  // =============================================
+
+  // GET /auth/me
+  // Returns current user profile info
+  // Business rules: must be logged in
   r.get("/me", async (req, res) => {
     const sid = req.cookies.sid;
     const userId = sid ? SessionManager.instance().getUserId(sid) : null;
@@ -71,6 +108,15 @@ export default function authRoutes(db) {
     return res.json({ ok: true, user });
   });
 
+  // =============================================
+  // PASSWORD RECOVERY ENDPOINT
+  // =============================================
+
+  // POST /auth/recover
+  // Password recovery via security questions
+  // Business rules: all 3 questions must be answered correctly
+  // DB side-effects: updates password hash if newPassword provided
+  // Edge cases: user not found, wrong answers, missing newPassword
   r.post("/recover", async (req, res) => {
     const { email, answers, newPassword } = req.body || {};
     const user = await db.get("SELECT id FROM users WHERE email = ?", [String(email).toLowerCase()]);

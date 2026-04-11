@@ -1,0 +1,153 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>History - DriveShare</title>
+  <link rel="stylesheet" href="/style.css"/>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbarInner">
+      <a class="brand" href="/"><span class="logoDot"></span>DriveShare</a>
+      <div class="navLinks">
+        <a href="/renter.html">Search</a>
+        <a href="/owner.html">Owner</a>
+        <a href="/notifications.html">Notifications</a>
+        <a href="/messages.html">Messages</a>
+        <a href="/history.html">History</a>
+      </div>
+    </div>
+  </div>
+
+  <main class="wrap">
+    <div class="card section">
+      <div class="flexBetweenTopWrap">
+        <div>
+          <h1 class="pageTitle">Rental History</h1>
+          <div class="sub">See past booking activity as renter and owner. Leave feedback for completed rentals.</div>
+        </div>
+        <div class="pill" id="mePill">Checking login…</div>
+      </div>
+
+      <div id="historyContainer" class="mt14"></div>
+      <pre id="out" class="mt12 hidden"></pre>
+    </div>
+  </main>
+
+<script type="module">
+import { apiGet, apiPost, money, showToast } from "./ui.js";
+
+const historyContainer = document.getElementById('historyContainer');
+const mePill = document.getElementById('mePill');
+const out = document.getElementById('out');
+
+function renderReviewForm(booking) {
+  return `
+    <div class="card section mt10 noShadow">
+      <div class="flexBetweenTopWrap">
+        <div class="fw950">Leave a review</div>
+        <div class="pill">Rating 1-5</div>
+      </div>
+      <div class="row mt12">
+        <input class="input w110" data-booking="${booking.id}" data-field="rating" placeholder="Rating" />
+        <input class="input flex1Min260" data-booking="${booking.id}" data-field="comment" placeholder="Comment (optional)" />
+        <button class="btn" data-action="submit-review" data-booking="${booking.id}">Submit</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderBookingRow(booking, role) {
+  const counterpartyName = role === 'renter' ? booking.owner_name : booking.renter_name;
+  const counterpartyLabel = role === 'renter' ? 'Owner' : 'Renter';
+  const reviewHtml = booking.my_review_id
+    ? `<div class="sub mt8">Your review: ${booking.my_rating} ★${booking.my_comment ? ` — ${booking.my_comment}` : ''}</div>`
+    : `<div class="sub mt8">You have not reviewed ${counterpartyName} yet.</div>`;
+
+  return `
+    <div class="card section mt14 noShadow bookingRow" data-booking="${booking.id}">
+      <div class="flexBetweenTopWrap">
+        <div>
+          <div class="fw950">${booking.title || `${booking.year} ${booking.make} ${booking.model}`}</div>
+          <div class="sub mt6">Car #${booking.car_id} • ${booking.pickup_location}</div>
+          <div class="sub mt6">${booking.start_date} → ${booking.end_date}</div>
+        </div>
+        <div class="pill">${booking.status}</div>
+      </div>
+      <div class="mt10">
+        <div class="sub"><strong>${counterpartyLabel}:</strong> ${counterpartyName}</div>
+        <div class="sub mt6"><strong>Total:</strong> ${money(booking.total_cents)}</div>
+      </div>
+      ${reviewHtml}
+      ${booking.my_review_id ? '' : renderReviewForm(booking)}
+    </div>
+  `;
+}
+
+function renderSection(title, bookings, role) {
+  if (!bookings || !bookings.length) {
+    return `<div class="card section mt14"><div class="fw950">${title}</div><div class="sub mt6">No bookings found.</div></div>`;
+  }
+  return `
+    <div class="card section mt14">
+      <div class="fw950">${title}</div>
+      <div class="sub mt6">${bookings.length} booking${bookings.length === 1 ? '' : 's'}.</div>
+    </div>
+    ${bookings.map((b) => renderBookingRow(b, role)).join('')}
+  `;
+}
+
+async function loadHistory() {
+  const user = await apiGet('/api/auth/me');
+  if (!user.ok) {
+    mePill.textContent = 'Not logged in';
+    historyContainer.innerHTML = '<div class="sub mt14">Login to see your booking history.</div>';
+    return;
+  }
+  mePill.textContent = `Logged in: ${user.user.display_name}`;
+
+  const r = await apiGet('/api/bookings/history');
+  if (!r.ok) {
+    out.classList.remove('hidden');
+    out.textContent = JSON.stringify(r, null, 2);
+    return;
+  }
+
+  out.classList.add('hidden');
+  out.textContent = '';
+
+  historyContainer.innerHTML = `
+    ${renderSection('Renter history', r.renterBookings, 'renter')}
+    ${renderSection('Owner history', r.ownerBookings, 'owner')}
+  `;
+}
+
+historyContainer.addEventListener('click', async (event) => {
+  const button = event.target.closest('button[data-action="submit-review"]');
+  if (!button) return;
+
+  const bookingId = Number(button.dataset.booking);
+  const row = document.querySelector(`.bookingRow[data-booking="${bookingId}"]`);
+  if (!row) return;
+
+  const ratingEl = row.querySelector(`[data-booking="${bookingId}"][data-field="rating"]`);
+  const commentEl = row.querySelector(`[data-booking="${bookingId}"][data-field="comment"]`);
+  const rating = Number(ratingEl?.value);
+  const comment = commentEl?.value;
+
+  const r = await apiPost(`/api/bookings/${bookingId}/review`, { rating, comment });
+  if (!r.ok) {
+    showToast('Review failed', r.error || 'Try again');
+    out.classList.remove('hidden');
+    out.textContent = JSON.stringify(r, null, 2);
+    return;
+  }
+
+  showToast('Review saved', 'Thank you for your feedback.');
+  await loadHistory();
+});
+
+loadHistory();
+</script>
+</body>
+</html>

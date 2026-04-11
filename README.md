@@ -49,6 +49,12 @@ A comprehensive car rental platform demonstrating advanced software design patte
 
 ## Testing & Validation
 
+### Recent Fixes (April 2026)
+- **Review System**: Fixed review logic so renters review cars and owners review renters (not owners reviewing owners)
+- **Message Read Status**: Added `is_read` field to messages table and `/api/messages/:id/read` endpoint
+- **Database Schema**: Updated reviews table with `reviewee_type` field to support both user and car reviews
+- **Migration System**: Enhanced database migration to handle schema updates without data loss
+
 ### Comprehensive Edge Case Testing
 The project includes a robust test suite (`edge_case_tests.js`) that validates all implementations:
 
@@ -73,7 +79,7 @@ npm run test:edge
 ### API Testing
 Basic functionality tests are available in `test_implementations.js`:
 ```bash
-node test_implementations.js
+npm test
 ```
 
 ## Technical Architecture

@@ -1,3 +1,10 @@
+// =============================================
+// FILE: messages.js
+// Messaging routes (in-app messaging between users)
+// Created: 2024-12-19
+// Updated: 2024-12-19
+// =============================================
+
 import express from "express";
 import { requireAuth } from "../middleware/auth.js";
 import emailService from "../services/emailService.js";
@@ -5,8 +12,14 @@ import emailService from "../services/emailService.js";
 export default function messageRoutes(db) {
   const r = express.Router();
 
-  // Get a thread for a car between current user and another user
-  // GET /api/messages/thread?carId=1&otherUserId=2
+  // =============================================
+  // GET MESSAGE THREAD ENDPOINT
+  // =============================================
+
+  // GET /api/messages/thread?carId=1&otherUserId=2 //
+  // Grab the conversation between me and someone else about a car ////
+  // Need: me logged in, valid IDs, and we're actually linked (owner/renter) //////
+  // Watch for: missing car/user or unauthorized participant //
   r.get("/thread", requireAuth, async (req, res) => {
     try {
       const carId = Number(req.query.carId);
@@ -25,9 +38,9 @@ export default function messageRoutes(db) {
       const me = req.userId;
       const ownerId = car.owner_id;
 
-      // Conversation is always owner <-> renter for a car.
-      // If I'm the owner, the other user is the renter.
-      // If I'm not the owner, I must be the renter and the other user must be the owner.
+      // Okay, conversations are always owner talking to renter (or vice versa) ////
+      // If I'm the owner, other person is renter //////
+      // If I'm not the owner, I'm the renter and other person must be the owner //
       let renterId;
       if (me === ownerId) {
         renterId = otherUserId;
@@ -55,8 +68,15 @@ export default function messageRoutes(db) {
     }
   });
 
-  // Send message (in-app messaging)
-  // Payload: { carId, toUserId, body }
+  // =============================================
+  // SEND MESSAGE ENDPOINT
+  // =============================================
+
+  // POST /api/messages/ //
+  // Let's send a message in this car conversation ////
+  // Payload: { carId, toUserId, body } //////
+  // Check: logged in, valid IDs, only owner/renter can message each other //
+  // Heads up: creates message, notification, and email ////
   r.post("/", requireAuth, async (req, res) => {
     try {
       const { carId, toUserId, body } = req.body || {};
@@ -101,7 +121,7 @@ export default function messageRoutes(db) {
       const recipient = await db.get("SELECT display_name, email FROM users WHERE id = ?", [toId]);
       const carDetails = await db.get("SELECT title, make, model, year FROM cars WHERE id = ?", [cid]);
 
-      // notify receiver (in-app)
+      // Notify receiver (in-app)
       await db.run(
         "INSERT INTO notifications(user_id, type, text) VALUES(?,?,?)",
         [toId, "message", `New message about car #${cid}.`]
@@ -120,8 +140,14 @@ export default function messageRoutes(db) {
     }
   });
 
-  // Mark message as read
-  // POST /api/messages/:id/read
+  // =============================================
+  // MARK MESSAGE READ ENDPOINT
+  // =============================================
+
+  // POST /api/messages/:id/read //
+  // Okay, let's mark this message as read ////
+  // Need: I'm logged in and actually in this conversation //////
+  // What changes: sets is_read flag (only for messages I received, not mine) //
   r.post("/:id/read", requireAuth, async (req, res) => {
     try {
       const messageId = Number(req.params.id);

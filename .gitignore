@@ -1,9 +1,30 @@
-/db
-/public
-/scripts
-/src
-/package.json
-/server.js
-/node_modules
-/package-lock.json
-/driveshare.sqlite
+# Dependencies
+node_modules/
+package-lock.json
+
+# Environment
+.env
+.env.local
+
+# Virtual environments
+.venv/
+venv/
+
+# Database files (dev only)
+*.sqlite
+*.sqlite3
+*.db
+
+# Test files (dev only)
+test_implementations.js
+edge_case_tests.js
+test_fixes.js
+register_test.py
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/settings.json
+.idea/

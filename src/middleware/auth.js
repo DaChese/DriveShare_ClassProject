@@ -1,4 +1,15 @@
 
+/*
+ * Author:
+ * Created on: April 11, 2026
+ * Last updated: April 11, 2026
+ * Purpose: Authentication middleware using SessionManager singleton pattern
+ */
+
+// =============================================
+// AUTH MIDDLEWARE
+// =============================================
+
 import SessionManager from "../patterns/SessionManager.js";
 
 export function requireAuth(req, res, next) {

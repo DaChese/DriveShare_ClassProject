@@ -1,16 +1,13 @@
-/**
- * DriveShare - Car Rental Platform Server
- *
- * Main application entry point that configures Express.js server with:
- * - RESTful API routes for authentication, cars, bookings, messaging
- * - SQLite database integration
- * - Static file serving for frontend assets
- * - Error handling and logging
- * - Design pattern implementations throughout the application
- *
- * Architecture follows MVC pattern with route handlers, database models,
- * and service layers implementing various design patterns.
+/*
+ * Author:
+ * Created on: April 11, 2026
+ * Last updated: April 11, 2026
+ * Purpose: Main server setup and route configuration for DriveShare car rental platform
  */
+
+// =============================================
+// IMPORTS AND SETUP
+// =============================================
 
 import "dotenv/config";
 import express from "express";
@@ -31,10 +28,10 @@ import devSeedRoutes from "./src/routes/devSeed.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/**
- * Express application instance
- * Configured with JSON parsing, cookie handling, and static file serving
- */
+// =============================================
+// EXPRESS APP CONFIG
+// =============================================
+
 const app = express();
 
 // Middleware configuration
@@ -42,10 +39,10 @@ app.use(express.json()); // Parse JSON request bodies
 app.use(cookieParser()); // Parse cookies for session management
 app.use(express.static(path.join(__dirname, "public"))); // Serve static frontend files
 
-/**
- * Database connection
- * SQLite database instance shared across all routes
- */
+// =============================================
+// DATABASE AND ROUTES
+// =============================================
+
 const db = await openDb();
 
 // Health check endpoint for monitoring
@@ -60,6 +57,10 @@ app.use("/api/notifications", notificationRoutes(db)); // In-app notification sy
 app.use("/api/messages", messageRoutes(db)); // Inter-user messaging
 app.use("/api/photos", photoRoutes());       // Photo upload handling
 app.use("/api/dev", devSeedRoutes(db));      // Development data seeding
+
+// =============================================
+// ERROR HANDLING
+// =============================================
 
 /**
  * Global unhandled promise rejection handler
@@ -78,6 +79,9 @@ app.use((err, req, res, next) => {
   res.status(500).json({ ok: false, error: "Server error." });
 });
 
-// Server startup
+// =============================================
+// SERVER STARTUP
+// =============================================
+
 const PORT = 3000;
 app.listen(PORT, () => console.log(`DriveShare running at http://localhost:${PORT}`));

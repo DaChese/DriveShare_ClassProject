@@ -1,31 +1,16 @@
 
-/**
- * CarListingBuilder - Builder Pattern Implementation
- *
- * Provides a fluent interface for constructing complex car listing objects
- * with optional parameters and built-in validation.
- *
- * Design Pattern: Builder
- * - Separates construction of complex objects from their representation
- * - Allows step-by-step construction with method chaining
- * - Enables creation of different representations using same construction process
- * - Provides validation before final object creation
- *
- * Usage: Used in car creation endpoints to build car listing objects
- * with optional fields in a readable, maintainable way.
- */
+// =============================================
+// FILE: CarListingBuilder.js
+// Builder pattern for car listing objects
+// Created: 2024-12-19
+// Updated: 2024-12-19
+// =============================================
 
-/**
- * Builder class for creating car listing objects
- * Implements fluent interface for step-by-step car listing construction
- */
+// Builder pattern for car listings
+// Used in car creation endpoints to build objects with optional fields
 class CarListingBuilder {
-  /**
-   * Initialize builder with required owner ID
-   * @param {number} ownerId - ID of the car owner
-   */
+  // Initialize with required owner ID
   constructor(ownerId) {
-    /** @private Internal car listing data object */
     this.data = {
       owner_id: ownerId,
       title: "",
@@ -35,74 +20,40 @@ class CarListingBuilder {
       mileage: 0,
       pickup_location: "",
       price_per_day_cents: 0,
-      active: 1 // Default to active listing
+      active: 1 // Default active
     };
   }
 
-  /**
-   * Set the car title
-   * @param {string} v - Car title/description
-   * @returns {CarListingBuilder} This builder for method chaining
-   */
+  // Set car title
   title(v) { this.data.title = v; return this; }
 
-  /**
-   * Set the car make (manufacturer)
-   * @param {string} v - Car make (e.g., "Toyota", "Honda")
-   * @returns {CarListingBuilder} This builder for method chaining
-   */
+  // Set car make
   make(v) { this.data.make = v; return this; }
 
-  /**
-   * Set the car model
-   * @param {string} v - Car model (e.g., "Camry", "Civic")
-   * @returns {CarListingBuilder} This builder for method chaining
-   */
+  // Set car model
   model(v) { this.data.model = v; return this; }
 
-  /**
-   * Set the car manufacturing year
-   * @param {number} v - Year the car was manufactured
-   * @returns {CarListingBuilder} This builder for method chaining
-   */
+  // Set manufacturing year
   year(v) { this.data.year = v; return this; }
 
-  /**
-   * Set the car mileage
-   * @param {number} v - Current mileage of the car
-   * @returns {CarListingBuilder} This builder for method chaining
-   */
+  // Set current mileage
   mileage(v) { this.data.mileage = v; return this; }
 
-  /**
-   * Set the pickup location
-   * @param {string} v - Location where car can be picked up
-   * @returns {CarListingBuilder} This builder for method chaining
-   */
+  // Set pickup location
   pickupLocation(v) { this.data.pickup_location = v; return this; }
 
-  /**
-   * Set the daily rental price in cents
-   * @param {number} v - Price per day in cents (e.g., 5000 = $50.00)
-   * @returns {CarListingBuilder} This builder for method chaining
-   */
+  // Set daily price in cents
   pricePerDayCents(v) { this.data.price_per_day_cents = v; return this; }
 
-  /**
-   * Set whether the listing is active
-   * @param {boolean} v - True for active listing, false for inactive
-   * @returns {CarListingBuilder} This builder for method chaining
-   */
+  // Set active status (boolean to int conversion)
   active(v) { this.data.active = v ? 1 : 0; return this; }
 
-  /**
-   * Build and return the final car listing object
-   * @returns {Object} Complete car listing object with timestamp
-   */
+  // Build final object with timestamp
+  // DB side-effect: adds updated_at timestamp on creation
   build() {
     return {
       ...this.data,
-      updated_at: new Date().toISOString() // Add current timestamp
+      updated_at: new Date().toISOString()
     };
   }
 }

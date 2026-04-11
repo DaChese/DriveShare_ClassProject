@@ -1,4 +1,15 @@
 
+/*
+ * Author:
+ * Created on: April 11, 2026
+ * Last updated: April 11, 2026
+ * Purpose: SQLite database connection setup and configuration
+ */
+
+// =============================================
+// DATABASE CONNECTION
+// =============================================
+
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
 

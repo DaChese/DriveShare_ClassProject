@@ -1,3 +1,10 @@
+// =============================================
+// FILE: bookings.js
+// Booking management routes (create, cancel, pay, history, reviews)
+// Created: 2024-12-19
+// Updated: 2024-12-19
+// =============================================
+
 import express from "express";
 import { requireAuth } from "../middleware/auth.js";
 import { PaymentProxy, RealPaymentService } from "../patterns/PaymentProxy.js";
@@ -8,12 +15,21 @@ export default function bookingRoutes(db) {
   const r = express.Router();
   const payment = new PaymentProxy(new RealPaymentService());
 
-  // Create booking (must prevent overlap with bookings + blocks)
+  // =============================================
+  // CREATE BOOKING ENDPOINT
+  // =============================================
+
+  // POST /api/bookings/
+  // Create new booking request with availability checking
+  // Business rules: authenticated user, no booking/block overlaps, valid date range
+  // DB side-effects: inserts booking, creates notifications, sends email
+  // Edge cases: car not found, overlaps with existing bookings/blocks
   r.post("/", requireAuth, async (req, res) => {
     const { carId, startDate, endDate } = req.body || {};
     const cid = Number(carId);
     if (!cid || !startDate || !endDate) return res.status(400).json({ ok: false, error: "Missing fields." });
 
+    // Check for booking overlaps
     const overlap = await db.get(
       `SELECT 1 FROM bookings
        WHERE car_id = ?
@@ -24,6 +40,7 @@ export default function bookingRoutes(db) {
     );
     if (overlap) return res.status(409).json({ ok: false, error: "Car already booked for that range." });
 
+    // Check for availability block overlaps
     const overlapBlock = await db.get(
       `SELECT 1 FROM availability_blocks
        WHERE car_id = ?
@@ -36,6 +53,7 @@ export default function bookingRoutes(db) {
     const car = await db.get("SELECT owner_id, price_per_day_cents FROM cars WHERE id = ?", [cid]);
     if (!car) return res.status(404).json({ ok: false, error: "Car not found." });
 
+    // Calculate total cost
     const days = Math.max(1, Math.ceil((Date.parse(endDate) - Date.parse(startDate)) / (1000*60*60*24)));
     const total = days * car.price_per_day_cents;
 
@@ -48,7 +66,7 @@ export default function bookingRoutes(db) {
     const renter = await db.get("SELECT display_name, email FROM users WHERE id = ?", [req.userId]);
     const owner = await db.get("SELECT display_name, email FROM users WHERE id = ?", [car.owner_id]);
 
-    // notify owner of booking request (in-app)
+    // Notify owner of booking request (in-app)
     await db.run("INSERT INTO notifications(user_id, type, text) VALUES(?,?,?)",
       [car.owner_id, "booking", `New booking request for car #${cid} (booking #${result.lastID}).`]
     );
@@ -61,7 +79,14 @@ export default function bookingRoutes(db) {
     return res.json({ ok: true, bookingId: result.lastID, totalCents: total });
   });
 
-  // Cancel booking (frees availability)
+  // =============================================
+  // CANCEL BOOKING ENDPOINT
+  // =============================================
+
+  // POST /api/bookings/:id/cancel
+  // Cancel booking (renter or owner can cancel)
+  // Business rules: booking exists, user is renter or owner, not already cancelled
+  // DB side-effects: updates booking status, creates notifications, notifies watchers
   r.post("/:id/cancel", requireAuth, async (req, res) => {
     const bookingId = Number(req.params.id);
     const row = await db.get(
@@ -79,6 +104,7 @@ export default function bookingRoutes(db) {
 
     await db.run("UPDATE bookings SET status='cancelled' WHERE id = ?", [bookingId]);
 
+    // Notify both parties
     await db.run("INSERT INTO notifications(user_id, type, text) VALUES(?,?,?)",
       [row.owner_id, "booking", `Booking #${bookingId} was cancelled.`]
     );
@@ -86,11 +112,19 @@ export default function bookingRoutes(db) {
       [row.renter_id, "booking", `You cancelled booking #${bookingId}.`]
     );
 
+    // Notify watchers that car may be available
     await notifyWatchers(db, row.car_id, `Car #${row.car_id} may be available now (booking cancelled).`);
     return res.json({ ok: true });
   });
 
-  // Pay booking (Proxy)
+  // =============================================
+  // PAY BOOKING ENDPOINT
+  // =============================================
+
+  // POST /api/bookings/:id/pay
+  // Pay for booking using PaymentProxy pattern
+  // Business rules: booking exists, user is renter
+  // DB side-effects: payment processing (user balances, payment record, booking confirmation), notifications, emails
   r.post("/:id/pay", requireAuth, async (req, res) => {
     const bookingId = Number(req.params.id);
     const booking = await db.get(
@@ -99,6 +133,7 @@ export default function bookingRoutes(db) {
     );
     if (!booking) return res.status(404).json({ ok: false, error: "Booking not found." });
 
+    // Process payment through proxy (includes security checks)
     const rPay = await payment.pay(db, req.userId, bookingId, booking.renter_id, booking.owner_id, booking.total_cents);
     if (!rPay.ok) return res.status(400).json(rPay);
 
@@ -107,6 +142,7 @@ export default function bookingRoutes(db) {
     const owner = await db.get("SELECT display_name, email FROM users WHERE id = ?", [booking.owner_id]);
     const carDetails = await db.get("SELECT title, make, model, year FROM cars WHERE id = ?", [booking.car_id]);
 
+    // Create payment notifications
     await db.run("INSERT INTO notifications(user_id, type, text) VALUES(?,?,?)",
       [booking.owner_id, "payment", `Booking #${bookingId} was paid.`]
     );
@@ -121,9 +157,18 @@ export default function bookingRoutes(db) {
     return res.json({ ok: true });
   });
 
+  // =============================================
+  // BOOKING HISTORY ENDPOINT
+  // =============================================
+
+  // GET /api/bookings/history
+  // Get user's booking history (as renter and as owner)
+  // Business rules: authenticated user
+  // Includes review information for completed bookings
   r.get("/history", requireAuth, async (req, res) => {
     const userId = req.userId;
 
+    // Get bookings where user is renter
     const renterBookings = await db.all(
       `SELECT b.id,
               b.car_id,
@@ -151,6 +196,7 @@ export default function bookingRoutes(db) {
       [userId, userId]
     );
 
+    // Get bookings where user is owner
     const ownerBookings = await db.all(
       `SELECT b.id,
               b.car_id,
@@ -181,6 +227,15 @@ export default function bookingRoutes(db) {
     return res.json({ ok: true, renterBookings, ownerBookings });
   });
 
+  // =============================================
+  // REVIEW BOOKING ENDPOINT
+  // =============================================
+
+  // POST /api/bookings/:id/review
+  // Submit review for booking (renter reviews car, owner reviews renter)
+  // Business rules: authenticated user, valid booking, user is renter or owner, rating 1-5
+  // DB side-effects: inserts/updates review, creates notifications, sends email
+  // Edge cases: invalid rating, not allowed to review
   r.post("/:id/review", requireAuth, async (req, res) => {
     const bookingId = Number(req.params.id);
     const { rating, comment } = req.body || {};
@@ -195,6 +250,7 @@ export default function bookingRoutes(db) {
     );
     if (!booking) return res.status(404).json({ ok: false, error: "Booking not found." });
 
+    // Determine review type and target
     let revieweeType, revieweeId;
     if (booking.renter_id === userId) {
       // Renter reviews the car
@@ -215,6 +271,7 @@ export default function bookingRoutes(db) {
 
     const normalizedComment = comment ? String(comment).trim() : null;
 
+    // Insert or update review
     await db.run(
       `INSERT INTO reviews(booking_id, reviewer_id, reviewee_type, reviewee_id, rating, comment)
        VALUES(?,?,?,?,?,?)
@@ -245,6 +302,7 @@ export default function bookingRoutes(db) {
 
     const reviewer = await db.get("SELECT display_name FROM users WHERE id = ?", [userId]);
 
+    // Create in-app notification
     await db.run("INSERT INTO notifications(user_id, type, text) VALUES(?,?,?)",
       [notifyUserId, "review", `New review from ${reviewer.display_name} for ${revieweeName} (booking #${bookingId}).`]
     );
