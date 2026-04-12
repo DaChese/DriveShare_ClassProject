@@ -1,5 +1,11 @@
-/* DriveShare - Earthy Theme (clean + deduped) */
+/*
+ * Author: Aldo Medina and Rania Dayekh
+ * Created on: January 11, 2026
+ * Last updated: April 12, 2026
+ * Purpose: Defines the shared DriveShare look and layout across the frontend pages.
+ */
 
+/* Theme colors and shared sizing live here  */
 :root{
   --bg:#f4efe6;
   --card:#fffaf0;
@@ -16,7 +22,7 @@
   --shadow:0 10px 24px rgba(43,42,38,.10);
 }
 
-/* Base */
+/* page reset and shared text defaults. */
 *{ box-sizing:border-box; }
 
 body{
@@ -47,7 +53,7 @@ pre{
 
 .sub{ color:var(--muted); }
 
-/* Topbar */
+/*  top nav stays visible while the user moves through search and history pages. */
 .topbar{
   position:sticky;
   top:0;
@@ -89,6 +95,7 @@ pre{
   gap:10px;
   align-items:center;
   flex-wrap:nowrap;
+  /* Lets nav links scroll instead of wrapping awkwardly on smaller screens. */
   overflow-x:auto;
   min-width:0;
 }
@@ -130,7 +137,7 @@ pre{
   border:1px solid var(--line);
 }
 
-/* Cards / helpers */
+/* card shell used across search, history, messages, and owner pages. */
 .card{
   background:var(--card);
   border:1px solid var(--line);
@@ -159,7 +166,7 @@ pre{
   background:#fff;
 }
 
-/* Inputs / buttons */
+/* Shared form controls keep the same look across all public pages. */
 .input{
   height:42px;
   border-radius:var(--radius-sm);
@@ -222,7 +229,7 @@ pre{
   font-size:13px;
 }
 
-/* Home hero */
+/* Homepage hero splits the search area from the quick-link panel. */
 .hero{
   padding:26px 18px;
   display:grid;
@@ -242,6 +249,7 @@ pre{
 }
 
 @media(max-width:900px){
+  /* Collapse the hero to one column on tablets and phones. */
   .hero{ grid-template-columns:1fr; }
   .heroRight{
     border-left:none;
@@ -251,7 +259,7 @@ pre{
   }
 }
 
-/* Search bar layout */
+/* Search grids are reused on the homepage and renter results page. */
 .searchBar{
   display:grid;
   grid-template-columns:1.2fr .9fr .9fr 1fr auto;
@@ -270,7 +278,7 @@ pre{
   }
 }
 
-/* Slider + number input group */
+/* Range slider and number box work together as one price control. */
 .priceControls{
   display:flex;
   align-items:center;
@@ -289,7 +297,7 @@ pre{
 
 .range{ width:180px; }
 
-/* Results layout */
+/* Sidebar + results split keeps filters visible while browsing. */
 .resultsLayout{
   display:grid;
   grid-template-columns:320px 1fr;
@@ -303,6 +311,7 @@ pre{
 }
 
 .sidebar{
+  /* Filters stay pinned once the user scrolls down the results. */
   position:sticky;
   top:74px;
 }
@@ -329,7 +338,7 @@ pre{
   gap:12px;
 }
 
-/* Car cards */
+/* Car cards are the main browse/search result tiles. */
 .carCard{ overflow:hidden; }
 
 .clickCard{
@@ -340,6 +349,7 @@ pre{
 .clickCard:hover{ transform:translateY(-2px); }
 
 .carImg{
+  /* Holds either a placeholder or the loaded car photo. */
   height:150px;
   border-bottom:1px solid var(--line);
   background:linear-gradient(135deg, rgba(180,107,42,.18), rgba(75,122,85,.18));
@@ -399,7 +409,7 @@ pre{
   align-items:center;
 }
 
-/* Detail page */
+/* Car detail page uses a main content column and a sticky booking panel. */
 .detailLayout{
   display:grid;
   grid-template-columns:1.35fr .65fr;
@@ -412,6 +422,7 @@ pre{
 }
 
 .stickyCard{
+  /* Booking actions stay visible on larger screens. */
   position:sticky;
   top:74px;
 }
@@ -430,7 +441,7 @@ pre{
   overflow:hidden;
 }
 
-/* Calendar */
+/* Calendar cells show blocked or open dates for the selected car. */
 .calGrid{
   display:grid;
   grid-template-columns:repeat(7, 1fr);
@@ -451,7 +462,7 @@ pre{
 .calBlocked{ border-color: rgba(176,74,58,.55); }
 .calAvailable{ border-color: rgba(75,122,85,.55); }
 
-/* Messages */
+/* Inbox layout keeps the conversation list beside the active thread. */
 .inboxLayout{
   display:grid;
   grid-template-columns:320px 1fr;
@@ -524,6 +535,7 @@ pre{
 }
 
 .msgBox{
+  /* Limits thread height so long conversations do not stretch the whole page. */
   display:flex;
   flex-direction:column;
   gap:10px;
@@ -563,7 +575,7 @@ pre{
   }
 }
 
-/* Toast */
+/* Toast is reused for quick success and error feedback across the app. */
 .toast{
   position:fixed;
   right:16px;
@@ -593,7 +605,7 @@ pre{
   transform:translateY(0);
 }
 
-/* Unsplash image fade-in + credit */
+/* Photos fade in after they load, and credits only show on hover. */
 .carImg img.photo,
 .gallery img.photo{
   position:absolute;
@@ -638,7 +650,7 @@ pre{
 
 .imgCredit a:hover{ text-decoration:underline; }
 
-/* Utilities */
+/* utility classes help avoid repeating tiny one-off rules in each page. */
 .mt6{ margin-top:6px; }
 .mt8{ margin-top:8px; }
 .mt10{ margin-top:10px; }

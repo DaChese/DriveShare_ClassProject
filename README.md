@@ -1,5 +1,7 @@
 # DriveShare
 
+Aldo Medina and Rania Dayekh
+
 DriveShare is a car-sharing web app built with Node.js, Express, SQLite, and vanilla HTML/CSS/JavaScript. It focuses on the main owner and renter flows while also showing six design patterns.
 
 ## Overview

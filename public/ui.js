@@ -1,4 +1,13 @@
-// public/ui.js
+/*
+ * Author: Aldo Medina and Rania Dayekh
+ * Created on: January 11, 2026
+ * Last updated: April 12, 2026
+ * Purpose: Shares small frontend helpers for requests, dates, money, and toasts.
+ */
+
+// =============================================
+// QUERY STRING HELPERS
+// =============================================
 
 export function readQueryParams() {
   const out = {};
@@ -19,6 +28,10 @@ export function setQueryParams(basePath, params = {}) {
 
   return url.pathname + (url.search ? url.search : "");
 }
+
+// =============================================
+// API HELPERS
+// =============================================
 
 async function safeJson(res) {
   try { return await res.json(); } catch { return null; }
@@ -66,6 +79,10 @@ export async function apiPost(path, body) {
   }
 }
 
+// =============================================
+// FORMATTERS AND DATE HELPERS
+// =============================================
+
 export function money(cents) {
   const n = Number(cents);
   if (!Number.isFinite(n)) return "$0.00";
@@ -102,7 +119,10 @@ export function addDaysISO(isoDate, n) {
   return toISODate(d);
 }
 
-// toast
+// =============================================
+// TOAST HELPERS
+// =============================================
+
 let _toastTimer = null;
 
 export function showToast(title, sub = "") {
@@ -131,7 +151,11 @@ function escapeHtml(s) {
     .replaceAll(">", "&gt;");
 }
 
-// Unsplash (backend proxy)
+// =============================================
+// PHOTO HELPERS
+// =============================================
+
+// This goes through the backend route so the browser never calls Unsplash directly.
 export async function getUnsplashPhotoForCar(car) {
   const q = `${car.year} ${car.make} ${car.model} car`;
   const r = await apiGet(`/api/photos/unsplash?query=${encodeURIComponent(q)}`);

@@ -1,7 +1,7 @@
 /*
- * Author:
- * Created on: April 11, 2026
- * Last updated: April 11, 2026
+ * Author: Aldo Medina and Rania Dayekh
+ * Created on: January 11, 2026
+ * Last updated: April 12, 2026
  * Purpose: Main server setup and route configuration for DriveShare car rental platform
  */
 

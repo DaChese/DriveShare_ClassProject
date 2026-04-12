@@ -1,5 +1,5 @@
 /*
- * Author:
+ * Author: Aldo Medina and Rania Dayekh
  * Created on: January 11, 2026
  * Last updated: April 12, 2026
  * Purpose: Blocks protected routes unless the user has a valid session.

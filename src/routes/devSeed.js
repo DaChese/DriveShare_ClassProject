@@ -1,5 +1,5 @@
 /*
- * Author:
+ * Author: Aldo Medina and Rania Dayekh
  * Created on: January 11, 2026
  * Last updated: April 12, 2026
  * Purpose: a batch of routes to help seed and manage demo car listings for development and testing purposes.

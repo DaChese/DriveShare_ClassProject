@@ -1,5 +1,5 @@
 /*
- * Author:
+ * Author:Aldo Medina and Rania Dayekh
  * Created on: January 11, 2026
  * Last updated: April 12, 2026
  * Purpose: Checks whether a car is available for a requested date range.
@@ -10,7 +10,7 @@
 // =============================================
 
 export async function hasOverlap(db, carId, startDate, endDate) {
-  // Pending and confirmed bookings both block the car.
+  // Pending and confirmed bookings both block the car. /// Only if the booking overlaps the requested window.
   const overlapBooking = await db.get(
     `SELECT 1 FROM bookings
      WHERE car_id = ?
@@ -21,7 +21,7 @@ export async function hasOverlap(db, carId, startDate, endDate) {
   );
   if (overlapBooking) return true;
 
-  // Owner availability blocks also count as unavailable dates.
+  // Owner availability blocks also count as unavailable dates.Even if the car is still listed, it can't be booked during these blocks/////
   const overlapBlock = await db.get(
     `SELECT 1 FROM availability_blocks
      WHERE car_id = ?
