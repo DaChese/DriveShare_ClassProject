@@ -1,6 +1,6 @@
 # DriveShare
 
-DriveShare is a car-sharing web app built with Node.js, Express, SQLite, and vanilla HTML/CSS/JavaScript. It focuses on the main owner and renter flows while also showing six design patterns in the actual project code.
+DriveShare is a car-sharing web app built with Node.js, Express, SQLite, and vanilla HTML/CSS/JavaScript. It focuses on the main owner and renter flows while also showing six design patterns.
 
 ## Overview
 
@@ -225,7 +225,7 @@ npm install
 npm run initdb
 ```
 
-This step is important because the project now uses lightweight schema updates in `scripts/init_db.js`. Running it applies the current schema to an existing `driveshare.sqlite` file.
+This step is important because the project a lightweight schema updates in `scripts/init_db.js`. Running it applies the current schema to an existing `driveshare.sqlite` file.
 
 ### 3. Start the server
 
