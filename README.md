@@ -1,14 +1,14 @@
 # DriveShare
 
-DriveShare is a term project for CIS 476 Software Architecture and Design. It is a car-sharing web app built with Node.js, Express, SQLite, and vanilla HTML/CSS/JavaScript. The project was designed around grueling weeks of coding and testing, so the app focuses on complete renter and owner workflows while also showing six design patterns in a practical way.
+DriveShare is a car-sharing web app built with Node.js, Express, SQLite, and vanilla HTML/CSS/JavaScript. It focuses on the main owner and renter flows while also showing six design patterns in the actual project code.
 
-## Project Goal
+## Overview
 
-The goal of DriveShare is to let:
+DriveShare lets:
 - owners list cars, manage price and availability, and communicate with renters
 - renters browse and search for cars, watch listings, book cars, pay, message owners, and review the experience
 
-The project also demonstrates the design patterns:
+The project also uses these design patterns:
 - Singleton
 - Observer
 - Mediator
@@ -108,39 +108,33 @@ Main files:
 
 ### 1. Singleton
 - Class: `SessionManager`
-- Why it fits:
-  - there should be one shared session store
-  - auth routes and middleware all use the same instance
+- One shared session store keeps auth state in one place.
+- Auth routes and middleware use the same instance.
 
 ### 2. Observer
 - Class/function: `notifyWatchers` in `WatchNotifier`
-- Why it fits:
-  - renters subscribe to car conditions with watch settings
-  - car changes trigger notifications to matching watchers
+- Renters subscribe to car conditions with watch settings.
+- Car changes trigger notifications to matching watchers.
 
 ### 3. Mediator
 - Class: `SearchMediator`
-- Why it fits:
-  - search and browse rules are centralized in one place
-  - location, dates, and price filters are coordinated there
+- Search and browse rules are centralized in one place.
+- Location, dates, and price filters are coordinated there.
 
 ### 4. Builder
 - Class: `CarListingBuilder`
-- Why it fits:
-  - owner listing objects are constructed step by step
-  - optional and standard fields are assembled in one fluent builder
+- Owner listing objects are built step by step.
+- Optional and standard fields are assembled in one fluent builder.
 
 ### 5. Proxy
 - Classes: `PaymentProxy` and `RealPaymentService`
-- Why it fits:
-  - the proxy checks who is paying and validates the amount
-  - only then does it forward the payment to the real service
+- The proxy checks who is paying and validates the amount.
+- Then it forwards the payment to the real service.
 
 ### 6. Chain of Responsibility
 - Classes/functions: `QuestionHandler` and `buildRecoveryChain`
-- Why it fits:
-  - each security question is checked in sequence
-  - the flow stops as soon as one answer fails
+- Each security question is checked in sequence.
+- The flow stops as soon as one answer fails.
 
 ## Tech Stack
 
@@ -261,7 +255,7 @@ These routes create tagged demo cars for the logged-in owner so demo data can be
 
 ## Testing and Verification
 
-The current npm scripts are syntax-check verification scripts:
+The current npm scripts are syntax checks:
 
 ```bash
 npm test

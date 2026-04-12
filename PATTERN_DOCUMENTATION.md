@@ -5,7 +5,7 @@
 ### DriveShare class
 - `src/patterns/SessionManager.js`
 
-### What it does in this project
+### What it does
 `SessionManager` stores login sessions in one shared in-memory map. Auth routes and auth middleware both use the same instance so session lookups stay consistent across the app.
 
 ### Pattern role mapping
@@ -15,7 +15,7 @@
   - `src/routes/auth.js`
   - `src/middleware/auth.js`
 
-### class diagram
+### Class diagram
 
 ```
 +----------------------+
@@ -35,17 +35,17 @@
    and middleware
 ```
 
-### Why it fits
+### Why it works
 - There should only be one shared session store.
 - The app should not create separate session maps in different files.
-- The `instance()` method enforces that shared access point.
+- The `instance()` method keeps that shared access point.
 
 ## 2. Observer Pattern
 
 ### DriveShare file
 - `src/patterns/WatchNotifier.js`
 
-### What it does in this project
+### What it does
 DriveShare lets renters create watch records for a car. A watch can include:
 - a target max price
 - a watched date range
@@ -93,7 +93,7 @@ When a car changes in a way that matters, the app calls `notifyWatchers(...)`. T
 +----------------------+
 ```
 
-### Why it fits
+### Why it works
 - Renters subscribe to updates without being tightly coupled to car update logic.
 - The app can notify zero, one, or many watchers when a car changes.
 - Car routes do not need to know how every watcher is stored or evaluated.
@@ -103,7 +103,7 @@ When a car changes in a way that matters, the app calls `notifyWatchers(...)`. T
 ### DriveShare class
 - `src/patterns/SearchMediator.js`
 
-### What it does in this project
+### What it does
 `SearchMediator` centralizes car browse and search rules. Instead of spreading search logic across many routes or UI files, the app sends filter criteria into one mediator that coordinates:
 - location filtering
 - date filtering
@@ -135,7 +135,7 @@ The renter search UI feeds several inputs into the same coordinated search flow,
  browse mode --/
 ```
 
-### Why it fits
+### Why it works
 - Search rules live in one place.
 - Route handlers do not each rebuild the same filtering logic.
 - The app has one central object deciding how search inputs work together.
@@ -145,7 +145,7 @@ The renter search UI feeds several inputs into the same coordinated search flow,
 ### DriveShare class
 - `src/patterns/CarListingBuilder.js`
 
-### What it does in this project
+### What it does
 Owners create car listings through route logic that uses `CarListingBuilder`. The builder starts with base defaults, then fills in the car data step by step before returning the final listing object to insert into the database.
 
 ### Pattern role mapping
@@ -188,7 +188,7 @@ Owners create car listings through route logic that uses `CarListingBuilder`. Th
 +--------------------------+
 ```
 
-### Why it fits
+### Why it works
 - Car listings are assembled in a readable step-by-step way.
 - The builder keeps listing construction cleaner than building a large raw object in the route.
 - It supports optional or default values without making the route harder to read.
@@ -200,7 +200,7 @@ Owners create car listings through route logic that uses `CarListingBuilder`. Th
   - `PaymentProxy`
   - `RealPaymentService`
 
-### What it does in this project
+### What it does
 DriveShare uses a simulated payment system. The booking route does not talk directly to the real payment service. Instead, it calls `PaymentProxy`, which first checks:
 - the user is logged in
 - the logged-in user is the payer
@@ -240,17 +240,17 @@ If those checks pass, the proxy forwards the call to `RealPaymentService`, which
 +----------------------+
 ```
 
-### Why it fits
+### Why it works
 - The proxy controls access before payment logic runs.
 - Security and validation stay outside the real payment implementation.
-- The project simulates a safer external payment interaction without using a real provider.
+- It simulates a safer payment interaction without using a real provider.
 
 ## 6. Chain of Responsibility
 
 ### DriveShare file
 - `src/patterns/PasswordRecoveryChain.js`
 
-### What it does in this project
+### What it does
 Password recovery is built as a chain of three handlers. Each handler checks one question index. If the current answer is correct, the request moves to the next handler. If any answer fails, the whole recovery flow stops.
 
 ### Pattern role mapping
@@ -281,7 +281,7 @@ Password recovery is built as a chain of three handlers. Each handler checks one
 +----------------------+
 ```
 
-### Why it fits
+### Why it works
 - Each question is handled by one handler object.
 - The request moves from one handler to the next.
 - The flow stops immediately when one handler fails.
