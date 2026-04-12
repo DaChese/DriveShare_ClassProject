@@ -1,6 +1,20 @@
 <!doctype html>
-<html><head><meta charset="utf-8"/><title>Login</title><link rel="stylesheet" href="/style.css"/></head>
+<!--
+  Author:
+  Created on: January 11, 2026
+  Last updated: April 12, 2026
+  Purpose: Lets a user log in or log out of DriveShare.
+-->
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Login</title>
+  <link rel="stylesheet" href="/style.css"/>
+</head>
 <body>
+  <!-- ============================================= -->
+  <!-- TOP NAV                                       -->
+  <!-- ============================================= -->
   <div class="topbar">
     <div class="topbarInner">
       <a class="brand" href="/"><span class="logoDot"></span>DriveShare</a>
@@ -12,29 +26,49 @@
     </div>
   </div>
   <main class="wrap">
-<div class="card section">
-  <h1 class="pageTitle">Login</h1>
-  <div class="sub">Log in to book, watch, message, and pay.</div>
-  <div class="row mt14">
-    <input class="input" id="email" placeholder="email" />
-    <input class="input" id="pw" placeholder="password" type="password" />
-    <button class="btn" id="loginBtn">Login</button>
-    <button class="btnOutline" id="logoutBtn">Logout</button>
-    <a class="btnOutline btnLink" href="/recover.html">Forgot password?</a>
-  </div>
-</div>
-</main>
+    <!-- ============================================= -->
+    <!-- LOGIN CARD                                    -->
+    <!-- ============================================= -->
+    <div class="card section">
+      <h1 class="pageTitle">Login</h1>
+      <div class="sub">Log in to book, watch, message, and pay.</div>
+      <div class="row mt14">
+        <input class="input" id="email" placeholder="email" />
+        <input class="input" id="pw" placeholder="password" type="password" />
+        <button class="btn" id="loginBtn">Login</button>
+        <button class="btnOutline" id="logoutBtn">Logout</button>
+        <a class="btnOutline btnLink" href="/recover.html">Forgot password?</a>
+      </div>
+    </div>
+  </main>
   <script type="module">
-import { apiPost, showToast } from "./ui.js";
-document.getElementById('loginBtn').addEventListener('click', async () => {
-  const r = await apiPost('/api/auth/login', {email: email.value, password: pw.value});
-  if(r.ok){ showToast('Logged in'); }
-  else { showToast('Login failed', r.error || 'Check credentials'); }
-});
-document.getElementById('logoutBtn').addEventListener('click', async () => {
-  const r = await apiPost('/api/auth/logout', {});
-  if(r.ok){ showToast('Logged out'); }
-  else { showToast('Logout failed', r.error || 'Try again'); }
-});
-</script>
-</body></html>
+    /*
+     * Author:
+     * Created on: January 11, 2026
+     * Last updated: April 12, 2026
+     * Purpose: Sends login and logout requests from the page.
+     */
+
+    // =============================================
+    // IMPORTS
+    // =============================================
+
+    import { apiPost, showToast } from "./ui.js";
+
+    // =============================================
+    // EVENTS
+    // =============================================
+
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+      const r = await apiPost('/api/auth/login', {email: email.value, password: pw.value});
+      if(r.ok){ showToast('Logged in'); }
+      else { showToast('Login failed', r.error || 'Check credentials'); }
+    });
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      const r = await apiPost('/api/auth/logout', {});
+      if(r.ok){ showToast('Logged out'); }
+      else { showToast('Logout failed', r.error || 'Try again'); }
+    });
+  </script>
+</body>
+</html>

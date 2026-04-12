@@ -1,4 +1,10 @@
 <!doctype html>
+<!--
+  Author:
+  Created on: January 11, 2026
+  Last updated: April 12, 2026
+  Purpose: Lets renters search the full inventory with filters and sorting.
+-->
 <html>
 <head>
   <meta charset="utf-8"/>
@@ -6,6 +12,9 @@
   <link rel="stylesheet" href="/style.css"/>
 </head>
 <body>
+  <!-- ============================================= -->
+  <!-- TOP NAV                                       -->
+  <!-- ============================================= -->
   <div class="topbar">
     <div class="topbarInner">
       <a class="brand" href="/"><span class="logoDot"></span>DriveShare</a>
@@ -19,6 +28,9 @@
   </div>
 
   <main class="wrap">
+    <!-- ============================================= -->
+    <!-- SEARCH BAR                                    -->
+    <!-- ============================================= -->
     <div class="card section">
       <div class="flexBetweenTopWrap">
         <div>
@@ -43,6 +55,9 @@
       </div>
     </div>
 
+    <!-- ============================================= -->
+    <!-- RESULTS LAYOUT                                -->
+    <!-- ============================================= -->
     <div class="resultsLayout">
       <aside class="card section sidebar">
         <h3>Filters</h3>
@@ -88,6 +103,10 @@
       todayISO, addDaysISO,
       getUnsplashPhotoForCar
     } from "./ui.js";
+
+    // =============================================
+    // SEARCH MEDIATOR UI
+    // =============================================
 
     class SearchMediator{
       constructor(){
@@ -342,6 +361,10 @@
         this.syncEndMin();
       }
     }
+
+    // =============================================
+    // INITIAL LOAD
+    // =============================================
 
     const m = new SearchMediator();
     m.setDefaults();

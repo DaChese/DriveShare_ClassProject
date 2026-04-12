@@ -1,7 +1,20 @@
 <!doctype html>
+<!--
+  Author:
+  Created on: January 11, 2026
+  Last updated: April 12, 2026
+  Purpose: Shows in-app notifications and quick links back into the app.
+-->
 <html>
-<head><meta charset="utf-8"/><title>Notifications</title><link rel="stylesheet" href="/style.css"/></head>
+<head>
+  <meta charset="utf-8"/>
+  <title>Notifications</title>
+  <link rel="stylesheet" href="/style.css"/>
+</head>
 <body>
+  <!-- ============================================= -->
+  <!-- TOP NAV                                       -->
+  <!-- ============================================= -->
   <div class="topbar">
     <div class="topbarInner">
       <a class="brand" href="/"><span class="logoDot"></span>DriveShare</a>
@@ -15,6 +28,9 @@
   </div>
 
   <main class="wrap">
+    <!-- ============================================= -->
+    <!-- NOTIFICATION LIST                             -->
+    <!-- ============================================= -->
     <div class="card section">
       <div class="flexBetweenTopWrap">
         <div>
@@ -34,7 +50,15 @@
 <script type="module">
 import { apiGet, apiPost, showToast } from "./ui.js";
 
+// =============================================
+// DOM
+// =============================================
+
 const list = document.getElementById('list');
+
+// =============================================
+// HELPERS
+// =============================================
 
 function parseMessageNotification(text){
   const parts = {};
@@ -110,6 +134,10 @@ async function render(items){
     list.appendChild(div);
   }
 }
+
+// =============================================
+// LOAD AND EVENTS
+// =============================================
 
 async function load(){
   const r = await apiGet('/api/notifications');

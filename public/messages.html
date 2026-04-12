@@ -1,7 +1,20 @@
 <!doctype html>
+<!--
+  Author:
+  Created on: January 11, 2026
+  Last updated: April 12, 2026
+  Purpose: Shows the inbox and full message thread for owner-renter conversations.
+-->
 <html>
-<head><meta charset="utf-8"/><title>Messages</title><link rel="stylesheet" href="/style.css"/></head>
+<head>
+  <meta charset="utf-8"/>
+  <title>Messages</title>
+  <link rel="stylesheet" href="/style.css"/>
+</head>
 <body>
+  <!-- ============================================= -->
+  <!-- TOP NAV                                       -->
+  <!-- ============================================= -->
   <div class="topbar">
     <div class="topbarInner">
       <a class="brand" href="/"><span class="logoDot"></span>DriveShare</a>
@@ -15,6 +28,9 @@
   </div>
 
   <main class="wrap">
+    <!-- ============================================= -->
+    <!-- INBOX LAYOUT                                  -->
+    <!-- ============================================= -->
     <div class="card section">
       <h1 class="pageTitle">Messages</h1>
       <div class="sub">Open your inbox, pick a conversation, and keep the car details in context.</div>
@@ -52,6 +68,10 @@
 
 <script type="module">
 import { apiGet, apiPost, readQueryParams, setQueryParams, showToast } from "./ui.js";
+
+// =============================================
+// DOM AND STATE
+// =============================================
 
 const params = readQueryParams();
 const conversationList = document.getElementById('conversationList');
@@ -94,6 +114,10 @@ function formatPreview(text){
 function sameConversation(item, carId, otherUserId){
   return String(item.car_id) === String(carId) && String(item.other_user_id) === String(otherUserId);
 }
+
+// =============================================
+// RENDER
+// =============================================
 
 function renderConversations(){
   conversationList.innerHTML = '';
@@ -158,6 +182,10 @@ function renderMessages(msgs){
   thread.scrollTop = thread.scrollHeight;
 }
 
+// =============================================
+// LOADERS
+// =============================================
+
 async function loadMe(){
   const r = await apiGet('/api/auth/me');
   me = r.ok ? r.user : null;
@@ -203,10 +231,7 @@ async function loadConversations(options = {}){
   renderConversations();
 
   if(suppressAutoOpen) return;
-
-  if(activeConversation){
-    return;
-  }
+  if(activeConversation) return;
 
   if(params.carId && params.other){
     const existing = conversations.find((item) => sameConversation(item, params.carId, params.other));
@@ -268,6 +293,10 @@ async function selectConversation(item){
   await loadThread();
 }
 
+// =============================================
+// EVENTS
+// =============================================
+
 conversationList.addEventListener('click', async (event) => {
   const button = event.target.closest('button.conversationItem');
   if(!button) return;
@@ -318,6 +347,10 @@ document.getElementById('refreshBtn').addEventListener('click', async () => {
   await loadThread();
   showToast('Inbox refreshed');
 });
+
+// =============================================
+// INITIAL LOAD
+// =============================================
 
 await loadMe();
 if(!me){

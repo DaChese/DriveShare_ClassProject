@@ -1,4 +1,10 @@
 <!doctype html>
+<!--
+  Author:
+  Created on: January 11, 2026
+  Last updated: April 12, 2026
+  Purpose: Shows one car, its calendar, and the booking or watch actions for it.
+-->
 <html>
 <head>
   <meta charset="utf-8"/>
@@ -6,6 +12,9 @@
   <link rel="stylesheet" href="/style.css"/>
 </head>
 <body>
+  <!-- ============================================= -->
+  <!-- TOP NAV                                       -->
+  <!-- ============================================= -->
   <div class="topbar">
     <div class="topbarInner">
       <a class="brand" href="/"><span class="logoDot"></span>DriveShare</a>
@@ -20,6 +29,9 @@
   </div>
 
   <main class="wrap">
+    <!-- ============================================= -->
+    <!-- CAR DETAIL LAYOUT                             -->
+    <!-- ============================================= -->
     <div class="detailLayout">
       <section class="card section">
         <div class="gallery">
@@ -120,6 +132,10 @@
   <script type="module">
     import { apiGet, apiPost, money, daysBetween, addDays, toISODate, readQueryParams, showToast, getUnsplashPhotoForCar } from "./ui.js";
 
+    // =============================================
+    // DOM AND STATE
+    // =============================================
+
     const qp = readQueryParams();
     const carId = qp.id;
 
@@ -159,6 +175,10 @@
     let me = null;
     let currentBookingId = null;
     let currentBookingTotalCents = null;
+
+    // =============================================
+    // HELPERS
+    // =============================================
 
     function setPendingPayment(bookingId, totalCents){
       currentBookingId = bookingId;
@@ -213,6 +233,10 @@
     function isDateInRange(day, start, end){
       return day >= start && day < end;
     }
+
+    // =============================================
+    // LOADERS
+    // =============================================
 
     async function loadCalendar(){
       const r = await apiGet(`/api/cars/${carId}/calendar`);
@@ -278,6 +302,10 @@
       const d = daysBetween(s,e);
       quote.textContent = `${d} day(s) x ${money(car.price_per_day_cents)}/day = ${money(d * car.price_per_day_cents)}`;
     }
+
+    // =============================================
+    // EVENTS
+    // =============================================
 
     document.getElementById('bookBtn').addEventListener('click', async () => {
       if(!car) return;

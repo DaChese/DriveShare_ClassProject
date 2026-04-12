@@ -1,4 +1,10 @@
 <!doctype html>
+<!--
+  Author:
+  Created on: January 11, 2026
+  Last updated: April 12, 2026
+  Purpose: Lets owners create and manage their car listings.
+-->
 <html>
 <head>
   <meta charset="utf-8"/>
@@ -6,6 +12,9 @@
   <link rel="stylesheet" href="/style.css"/>
 </head>
 <body>
+  <!-- ============================================= -->
+  <!-- TOP NAV                                       -->
+  <!-- ============================================= -->
   <div class="topbar">
     <div class="topbarInner">
       <a class="brand" href="/"><span class="logoDot"></span>DriveShare</a>
@@ -19,6 +28,9 @@
   </div>
 
   <main class="wrap">
+    <!-- ============================================= -->
+    <!-- OWNER DASHBOARD                               -->
+    <!-- ============================================= -->
     <div class="card section">
       <div class="flexBetweenTopWrap">
         <div>
@@ -81,6 +93,10 @@
 <script type="module">
 import { apiGet, apiPost, money, showToast } from "./ui.js";
 
+// =============================================
+// DOM AND STATE
+// =============================================
+
 const out = document.getElementById('out');
 const toggleDebugBtn = document.getElementById('toggleDebug');
 const myCars = document.getElementById('myCars');
@@ -92,6 +108,10 @@ const loadMineBtn = document.getElementById('loadMine');
 let me = null;
 let debugOn = false;
 let lastDebug = null;
+
+// =============================================
+// DEBUG HELPERS
+// =============================================
 
 function setDebug(obj){
   lastDebug = obj;
@@ -120,6 +140,10 @@ toggleDebugBtn.addEventListener('click', () => {
     out.textContent = '';
   }
 });
+
+// =============================================
+// RENDER
+// =============================================
 
 function renderMine(cars){
   myCars.innerHTML = '';
@@ -160,6 +184,10 @@ function renderMine(cars){
   }
 }
 
+// =============================================
+// LOADERS
+// =============================================
+
 async function loadMe(){
   const r = await apiGet('/api/auth/me');
   me = r.ok ? r.user : null;
@@ -187,6 +215,10 @@ async function loadMine(){
   clearDebug();
   renderMine(r.cars || []);
 }
+
+// =============================================
+// EVENTS
+// =============================================
 
 const ok = await loadMe();
 if(ok) loadMine();

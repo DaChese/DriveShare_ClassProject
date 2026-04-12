@@ -1,8 +1,12 @@
+/*
+ * Author:
+ * Created on: January 11, 2026
+ * Last updated: April 12, 2026
+ * Purpose: Handles car browsing, listing management, availability, and watches.
+ */
+
 // =============================================
-// FILE: cars.js
-// Car management routes (browse, search, create, update, availability)
-// Created: 2024-12-19
-// Updated: 2024-12-19
+// IMPORTS
 // =============================================
 
 import express from "express";
@@ -12,10 +16,12 @@ import { notifyWatchers } from "../patterns/WatchNotifier.js";
 import { listBlocksAndBookings } from "../services/availability.js";
 import SearchMediator from "../patterns/SearchMediator.js";
 
-// Date normalization utilities
+// =============================================
+// DATE AND PRICE HELPERS
+// =============================================
+
 function normalizeISODate(s) {
   const t = String(s || "").trim();
-  // Accept "YYYY-MM-DD" or "YYYY-MM-DDTHH:MM:SS..." and keep just the date part
   if (t.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(t)) return t.slice(0, 10);
   return t;
 }
@@ -31,7 +37,6 @@ function overlaps(aStart, aEnd, bStart, bEnd) {
   const ae = normalizeISODate(aEnd);
   const bs = normalizeISODate(bStart);
   const be = normalizeISODate(bEnd);
-  // same logic you used in SQL: (start < otherEnd) && (end > otherStart)
   return as < be && ae > bs;
 }
 
@@ -42,76 +47,70 @@ function toCentsFromDollars(v) {
   return Math.round(n * 100);
 }
 
+// =============================================
+// CAR ROUTES
+// =============================================
+
 export default function carRoutes(db) {
   const r = express.Router();
-  const searchMediator = new SearchMediator(db); // Mediator for search operations
+  const searchMediator = new SearchMediator(db);
 
   // =============================================
-  // BROWSE CARS ENDPOINT
+  // BROWSE CARS
   // =============================================
 
-  // GET /api/cars/browse?location=detroit&maxPrice=120&limit=12
-  // Browse cars without date filtering (for homepage/library)
-  // Business rules: optional location filter, optional price filter, pagination
+  // GET /api/cars/browse
+  // Returns available active cars with optional location and price filters.
   r.get("/browse", async (req, res) => {
     const { location, maxPrice, limit } = req.query || {};
 
-    // Prepare criteria for mediator
     const criteria = {
       location: String(location || "").trim(),
       maxPrice: maxPrice != null ? Number(maxPrice) : null,
       limit: Math.max(1, Math.min(500, Number(limit || 500) || 500))
     };
 
-    // Validate criteria
     const validation = searchMediator.validateCriteria(criteria);
     if (!validation.ok) {
       return res.status(400).json({ ok: false, error: validation.error });
     }
 
-    // Execute browse using mediator
     const cars = await searchMediator.browseCars(criteria);
     return res.json({ ok: true, cars });
   });
 
   // =============================================
-  // SEARCH CARS ENDPOINT
+  // SEARCH CARS
   // =============================================
 
-  // GET /api/cars/search?location=detroit&start=2024-01-01&end=2024-01-05&maxPrice=120
-  // Search cars with location + date range + optional price filter
-  // Business rules: location required, valid date range, optional price filter
-  // Edge cases: invalid dates, end before start, location missing
+  // GET /api/cars/search
+  // Expects location, start, end, and optional maxPrice.
   r.get("/search", async (req, res) => {
     const { location, start, end, maxPrice } = req.query || {};
 
-    // Prepare criteria for mediator
     const criteria = {
       location: String(location || "").trim(),
       startDate: normalizeISODate(start),
       endDate: normalizeISODate(end),
       maxPrice: maxPrice != null ? Number(maxPrice) : null,
-      requireLocation: true // Location required for search
+      requireLocation: true
     };
 
-    // Validate criteria using mediator
     const validation = searchMediator.validateCriteria(criteria);
     if (!validation.ok) {
       return res.status(400).json({ ok: false, error: validation.error });
     }
 
-    // Execute search using mediator
     const cars = await searchMediator.searchCars(criteria);
     return res.json({ ok: true, cars });
   });
 
   // =============================================
-  // OWNER CAR LISTING ENDPOINT
+  // OWNER LISTINGS
   // =============================================
 
   // GET /api/cars/mine/list
-  // List cars owned by current user
-  // Business rules: must be authenticated
+  // Returns the logged-in owner's cars.
   r.get("/mine/list", requireAuth, async (req, res) => {
     const rows = await db.all(
       `SELECT * FROM cars
@@ -123,12 +122,11 @@ export default function carRoutes(db) {
   });
 
   // =============================================
-  // GET CAR DETAILS ENDPOINT
+  // CAR DETAILS
   // =============================================
 
   // GET /api/cars/:id
-  // Get detailed car information with owner name
-  // Edge cases: car not found
+  // Returns one car plus the owner's display name.
   r.get("/:id", async (req, res) => {
     const carId = Number(req.params.id);
     const row = await db.get(
@@ -144,12 +142,11 @@ export default function carRoutes(db) {
   });
 
   // =============================================
-  // CAR CALENDAR ENDPOINT
+  // CAR CALENDAR
   // =============================================
 
   // GET /api/cars/:id/calendar
-  // Get availability calendar (bookings + blocks)
-  // Edge cases: car not found
+  // Returns bookings and owner blocks for the selected car.
   r.get("/:id/calendar", async (req, res) => {
     const carId = Number(req.params.id);
     const car = await db.get("SELECT id FROM cars WHERE id = ?", [carId]);
@@ -160,14 +157,11 @@ export default function carRoutes(db) {
   });
 
   // =============================================
-  // ADD AVAILABILITY BLOCK ENDPOINT
+  // ADD AVAILABILITY BLOCK
   // =============================================
 
   // POST /api/cars/:id/blocks
-  // Owner adds manual unavailable block
-  // Business rules: owner only, valid date range, no overlaps with existing bookings/blocks
-  // DB side-effects: inserts availability block, notifies watchers
-  // Edge cases: not owner, invalid dates, overlaps
+  // Owner blocks out a date range for maintenance or personal use.
   r.post("/:id/blocks", requireAuth, async (req, res) => {
     const carId = Number(req.params.id);
     const { startDate, endDate, reason } = req.body || {};
@@ -186,7 +180,7 @@ export default function carRoutes(db) {
       return res.status(400).json({ ok: false, error: "endDate must be after startDate." });
     }
 
-    // Prevent creating a block that overlaps an existing booking/block
+    // Business rule: blocks cannot overlap existing pending/confirmed bookings or other blocks.
     const current = await listBlocksAndBookings(db, carId);
 
     for (const b of current.bookings || []) {
@@ -208,6 +202,7 @@ export default function carRoutes(db) {
       }
     }
 
+    // DB side-effect: saves the manual block and notifies matching watchers.
     await db.run(
       "INSERT INTO availability_blocks(car_id, start_date, end_date, reason) VALUES(?,?,?,?)",
       [carId, s, e, reason ? String(reason) : null]
@@ -218,13 +213,11 @@ export default function carRoutes(db) {
   });
 
   // =============================================
-  // DELETE AVAILABILITY BLOCK ENDPOINT
+  // DELETE AVAILABILITY BLOCK
   // =============================================
 
   // POST /api/cars/:id/blocks/:blockId/delete
-  // Owner deletes availability block
-  // Business rules: owner only
-  // DB side-effects: deletes block, notifies watchers
+  // Removes one owner-created availability block.
   r.post("/:id/blocks/:blockId/delete", requireAuth, async (req, res) => {
     const carId = Number(req.params.id);
     const blockId = Number(req.params.blockId);
@@ -240,14 +233,11 @@ export default function carRoutes(db) {
   });
 
   // =============================================
-  // CREATE CAR LISTING ENDPOINT
+  // CREATE CAR LISTING
   // =============================================
 
   // POST /api/cars/
-  // Owner creates new car listing using Builder pattern
-  // Business rules: authenticated user, valid car data, defaults to active
-  // DB side-effects: inserts car listing
-  // Edge cases: missing fields, invalid data
+  // Creates a new owner listing using the builder pattern.
   r.post("/", requireAuth, async (req, res) => {
     const { title, make, model, year, mileage, pickupLocation, pricePerDay } = req.body || {};
     if (!title || !make || !model || !year || mileage == null || !pickupLocation || pricePerDay == null) {
@@ -273,6 +263,7 @@ export default function carRoutes(db) {
 
     const car = builder.build();
 
+    // DB side-effect: inserts the new listing and forces it active by default.
     const result = await db.run(
       `INSERT INTO cars(owner_id,title,make,model,year,mileage,pickup_location,price_per_day_cents,active,updated_at)
        VALUES(?,?,?,?,?,?,?,?,?,?)`,
@@ -285,7 +276,7 @@ export default function carRoutes(db) {
         car.mileage,
         car.pickup_location,
         car.price_per_day_cents,
-        1, // force active by default
+        1,
         car.updated_at,
       ]
     );
@@ -294,13 +285,11 @@ export default function carRoutes(db) {
   });
 
   // =============================================
-  // UPDATE PRICE ENDPOINT
+  // UPDATE PRICE
   // =============================================
 
   // POST /api/cars/:id/price
-  // Owner updates car daily price
-  // Business rules: owner only, valid price
-  // DB side-effects: updates price, notifies watchers (Observer pattern)
+  // Updates one listing's daily price.
   r.post("/:id/price", requireAuth, async (req, res) => {
     const carId = Number(req.params.id);
     const { pricePerDay } = req.body || {};
@@ -311,6 +300,7 @@ export default function carRoutes(db) {
     const cents = toCentsFromDollars(pricePerDay);
     if (cents == null) return res.status(400).json({ ok: false, error: "Invalid pricePerDay." });
 
+    // DB side-effect: updates price and then notifies watchers about the change.
     await db.run("UPDATE cars SET price_per_day_cents = ?, updated_at = datetime('now') WHERE id = ?", [cents, carId]);
 
     await notifyWatchers(db, carId, `Price drop/update: car #${carId} is now $${(cents / 100).toFixed(2)}/day`);
@@ -318,13 +308,11 @@ export default function carRoutes(db) {
   });
 
   // =============================================
-  // TOGGLE ACTIVE STATUS ENDPOINT
+  // TOGGLE ACTIVE STATUS
   // =============================================
 
   // POST /api/cars/:id/active
-  // Owner toggles car listing active/inactive
-  // Business rules: owner only
-  // DB side-effects: updates active status, notifies watchers
+  // Turns a listing on or off for searching and browsing.
   r.post("/:id/active", requireAuth, async (req, res) => {
     const carId = Number(req.params.id);
     const { active } = req.body || {};
@@ -340,14 +328,11 @@ export default function carRoutes(db) {
   });
 
   // =============================================
-  // WATCH CAR ENDPOINT
+  // SAVE WATCH
   // =============================================
 
   // POST /api/cars/:id/watch
-  // User subscribes to car watch notifications (Observer pattern)
-  // Business rules: authenticated user, optional price/date filters
-  // DB side-effects: inserts/updates watch subscription
-  // Edge cases: invalid price, invalid dates, end before start
+  // Saves a renter's price/date watch for this car.
   r.post("/:id/watch", requireAuth, async (req, res) => {
     const carId = Number(req.params.id);
     const { maxPricePerDay, watchStartDate, watchEndDate } = req.body || {};
@@ -373,6 +358,7 @@ export default function carRoutes(db) {
       return res.status(400).json({ ok: false, error: "watchEndDate must be after watchStartDate." });
     }
 
+    // DB side-effect: inserts or updates the user's watch settings for this car.
     await db.run(
       `INSERT OR REPLACE INTO watches(user_id, car_id, max_price_per_day_cents, watch_start_date, watch_end_date)
        VALUES(?,?,?,?,?)`,

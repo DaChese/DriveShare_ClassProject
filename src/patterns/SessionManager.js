@@ -1,20 +1,24 @@
-
 /*
  * Author:
- * Created on: April 11, 2026
- * Last updated: April 11, 2026
- * Purpose: Singleton session manager for user authentication state
+ * Created on: January 11, 2026
+ * Last updated: April 12, 2026
+ * Purpose: Keeps DriveShare login sessions in one shared place.
  */
 
 // =============================================
-// SINGLETON SESSION MANAGER
+// IMPORTS
 // =============================================
 
 import { v4 as uuidv4 } from "uuid";
 
+// =============================================
+// SESSION MANAGER
+// =============================================
+
 class SessionManager {
   static _instance = null;
 
+  // Singleton access point used by auth routes and middleware.
   static instance() {
     if (!SessionManager._instance) {
       SessionManager._instance = new SessionManager();
@@ -28,7 +32,6 @@ class SessionManager {
     }
 
     this.sessions = new Map();
-
     SessionManager._instance = this;
   }
 

@@ -1,4 +1,10 @@
 <!doctype html>
+<!--
+  Author:
+  Created on: January 11, 2026
+  Last updated: April 12, 2026
+  Purpose: Lets renters browse cars or start a filtered trip search.
+-->
 <html>
 <head>
   <meta charset="utf-8"/>
@@ -6,6 +12,9 @@
   <link rel="stylesheet" href="/style.css"/>
 </head>
 <body>
+  <!-- ============================================= -->
+  <!-- TOP NAV                                       -->
+  <!-- ============================================= -->
   <div class="topbar">
     <div class="topbarInner">
       <a class="brand" href="/"><span class="logoDot"></span>DriveShare</a>
@@ -21,6 +30,9 @@
   </div>
 
   <main class="wrap">
+    <!-- ============================================= -->
+    <!-- HERO SEARCH                                   -->
+    <!-- ============================================= -->
     <section class="card hero">
       <div>
         <div class="heroTitle">Find the right car for your trip.</div>
@@ -68,6 +80,9 @@
       </div>
     </section>
 
+    <!-- ============================================= -->
+    <!-- BROWSE RESULTS                                -->
+    <!-- ============================================= -->
     <section class="card section">
       <div class="flexBetweenWrap">
         <div>
@@ -82,6 +97,17 @@
   </main>
 
   <script type="module">
+    /*
+     * Author:
+     * Created on: January 11, 2026
+     * Last updated: April 12, 2026
+     * Purpose: Runs the homepage browse and quick search flow.
+     */
+
+    // =============================================
+    // IMPORTS AND DOM
+    // =============================================
+
     import { apiGet, money, setQueryParams, showToast, todayISO, addDaysISO, getUnsplashPhotoForCar } from "./ui.js";
 
     const locationEl = document.getElementById("location");
@@ -96,6 +122,10 @@
     const countPill = document.getElementById("countPill");
     const hintText = document.getElementById("hintText");
 
+    // =============================================
+    // FILTER HELPERS
+    // =============================================
+
     function setDefaults(){
       const t = todayISO();
       const s = addDaysISO(t, 1);
@@ -105,6 +135,7 @@
       endEl.min = addDaysISO(startEl.value, 1);
     }
 
+    // The slider uses one extra value as the "Any price" state.
     function priceBounds(){
       const min = Number(rangeEl.min);
       const anyValue = Number(rangeEl.max);
@@ -159,6 +190,10 @@
         maxPrice: maxPrice == null ? "" : maxPrice,
       });
     }
+
+    // =============================================
+    // RENDER HELPERS
+    // =============================================
 
     function clearGrid(msg){
       grid.innerHTML = '<div class="sub">' + msg + '</div>';
@@ -230,6 +265,10 @@
       hydratePhotos(cars);
     }
 
+    // =============================================
+    // SEARCH FLOW
+    // =============================================
+
     async function runSearch(){
       const loc = locationEl.value.trim();
       const start = startEl.value;
@@ -237,6 +276,7 @@
       const maxPrice = parseMaxPrice();
       const useSearch = Boolean(loc && start && end);
 
+      // Business rule: location + both dates switches the page into trip-search mode.
       const url = useSearch
         ? "/api/cars/search?location=" + encodeURIComponent(loc) +
           "&start=" + encodeURIComponent(start) +
@@ -268,11 +308,16 @@
       updateFullResultsLink();
     }
 
+    // Small debounce so typing in filters does not fire a request on every keypress.
     let t = null;
     function scheduleSearch(){
       if(t) clearTimeout(t);
       t = setTimeout(runSearch, 250);
     }
+
+    // =============================================
+    // EVENTS
+    // =============================================
 
     searchBtn.addEventListener("click", runSearch);
     locationEl.addEventListener("input", scheduleSearch);
@@ -280,6 +325,10 @@
     endEl.addEventListener("change", scheduleSearch);
     rangeEl.addEventListener("input", () => { updatePriceUIFromRange(); scheduleSearch(); });
     numEl.addEventListener("input", () => { updateRangeFromNumber(); scheduleSearch(); });
+
+    // =============================================
+    // INITIAL LOAD
+    // =============================================
 
     setDefaults();
     setPriceValue(null);

@@ -1,12 +1,12 @@
 /*
  * Author:
- * Created on: April 11, 2026
- * Last updated: April 11, 2026
- * Purpose: Mediator pattern for coordinating car search operations
+ * Created on: January 11, 2026
+ * Last updated: April 12, 2026
+ * Purpose: Centralizes the car search and browse rules.
  */
 
 // =============================================
-// SEARCH MEDIATOR (MEDIATOR PATTERN)
+// SEARCH MEDIATOR
 // =============================================
 
 class SearchMediator {
@@ -14,6 +14,7 @@ class SearchMediator {
     this.db = db;
   }
 
+  // Used for renter trip searches with location, dates, and optional price cap.
   async searchCars(criteria) {
     const { location, startDate, endDate, maxPrice, limit = 500 } = criteria;
 
@@ -25,20 +26,18 @@ class SearchMediator {
     `;
     const params = [];
 
-    // Apply location filtering
     if (location) {
       query += " AND c.pickup_location LIKE ? COLLATE NOCASE";
       params.push(`%${location}%`);
     }
 
-    // Apply price filtering
     if (maxPrice != null) {
       const cents = Math.round(maxPrice * 100);
       query += " AND c.price_per_day_cents <= ?";
       params.push(cents);
     }
 
-    // Apply date availability filtering
+    // Business rule: do not return cars that overlap an active booking or owner block.
     if (startDate && endDate) {
       query += `
         AND NOT EXISTS (
@@ -56,26 +55,24 @@ class SearchMediator {
       params.push(startDate, endDate, startDate, endDate);
     }
 
-    // Apply ordering and limit
     query += " ORDER BY c.price_per_day_cents ASC LIMIT ?";
     params.push(Math.min(limit, 500));
 
     return await this.db.all(query, params);
   }
 
+  // Used when the user is browsing without a full trip search yet.
   async browseCars(criteria) {
     const { location, maxPrice, limit = 500 } = criteria;
 
     let query = "SELECT c.* FROM cars c WHERE c.active = 1 AND c.price_per_day_cents > 0";
     const params = [];
 
-    // Location filtering
     if (location) {
       query += " AND c.pickup_location LIKE ? COLLATE NOCASE";
       params.push(`%${location}%`);
     }
 
-    // Price filtering
     if (maxPrice != null) {
       const cents = Math.round(maxPrice * 100);
       query += " AND c.price_per_day_cents <= ?";
@@ -88,15 +85,14 @@ class SearchMediator {
     return await this.db.all(query, params);
   }
 
+  // Edge-case checks shared by both browse and search endpoints.
   validateCriteria(criteria) {
     const { location, startDate, endDate, maxPrice } = criteria;
 
-    // Location is required for search (but optional for browse)
     if (!location && criteria.requireLocation) {
       return { ok: false, error: "Location is required." };
     }
 
-    // Validate dates if provided
     if (startDate && endDate) {
       if (!this.isValidISODate(startDate) || !this.isValidISODate(endDate)) {
         return { ok: false, error: "Dates must be in YYYY-MM-DD format." };
@@ -107,7 +103,6 @@ class SearchMediator {
       }
     }
 
-    // Validate price if provided
     if (maxPrice != null && (!Number.isFinite(maxPrice) || maxPrice < 0)) {
       return { ok: false, error: "Invalid maximum price." };
     }

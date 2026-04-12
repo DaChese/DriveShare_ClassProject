@@ -1,15 +1,24 @@
+/*
+ * Author:
+ * Created on: January 11, 2026
+ * Last updated: April 12, 2026
+ * Purpose: Handles inbox conversations and messages between owners and renters.
+ */
+
 // =============================================
-// FILE: messages.js
-// Messaging routes (in-app messaging between users)
-// Created: 2024-12-19
-// Updated: 2024-12-19
+// IMPORTS
 // =============================================
 
 import express from "express";
 import { requireAuth } from "../middleware/auth.js";
 import emailService from "../services/emailService.js";
 
+// =============================================
+// MESSAGE HELPERS
+// =============================================
+
 async function ownerCanMessageRenter(db, carId, ownerId, renterId) {
+  // Business rule: owners can only message renters tied to this car by a booking or existing thread.
   const priorBooking = await db.get(
     `SELECT 1
      FROM bookings b
@@ -34,12 +43,19 @@ async function ownerCanMessageRenter(db, carId, ownerId, renterId) {
   return Boolean(priorMessage);
 }
 
+// =============================================
+// MESSAGE ROUTES
+// =============================================
+
 export default function messageRoutes(db) {
   const r = express.Router();
 
   // =============================================
-  // GET CONVERSATION INBOX ENDPOINT
+  // LIST CONVERSATIONS
   // =============================================
+
+  // GET /api/messages/conversations
+  // Returns the current user's inbox with unread counts and latest message previews.
   r.get("/conversations", requireAuth, async (req, res) => {
     try {
       const me = req.userId;
@@ -90,13 +106,11 @@ export default function messageRoutes(db) {
   });
 
   // =============================================
-  // GET MESSAGE THREAD ENDPOINT
+  // LOAD THREAD
   // =============================================
 
-  // GET /api/messages/thread?carId=1&otherUserId=2 //
-  // Grab the conversation between me and someone else about a car ////
-  // Need: me logged in, valid IDs, and we're actually linked (owner/renter) //////
-  // Watch for: missing car/user or unauthorized participant //
+  // GET /api/messages/thread
+  // Expects carId and otherUserId, then returns one full owner/renter thread.
   r.get("/thread", requireAuth, async (req, res) => {
     try {
       const carId = Number(req.query.carId);
@@ -115,9 +129,6 @@ export default function messageRoutes(db) {
       const me = req.userId;
       const ownerId = car.owner_id;
 
-      // Okay, conversations are always owner talking to renter (or vice versa) ////
-      // If I'm the owner, other person is renter //////
-      // If I'm not the owner, I'm the renter and other person must be the owner //
       let renterId;
       if (me === ownerId) {
         renterId = otherUserId;
@@ -150,14 +161,11 @@ export default function messageRoutes(db) {
   });
 
   // =============================================
-  // SEND MESSAGE ENDPOINT
+  // SEND MESSAGE
   // =============================================
 
-  // POST /api/messages/ //
-  // Let's send a message in this car conversation ////
-  // Payload: { carId, toUserId, body } //////
-  // Check: logged in, valid IDs, only owner/renter can message each other //
-  // Heads up: creates message, notification, and email ////
+  // POST /api/messages/
+  // Expects carId, toUserId, and body.
   r.post("/", requireAuth, async (req, res) => {
     try {
       const { carId, toUserId, body } = req.body || {};
@@ -178,43 +186,40 @@ export default function messageRoutes(db) {
 
       const ownerId = car.owner_id;
 
-      // Determine renter participant and enforce owner<->renter messaging
       let renterId;
       if (req.userId === ownerId) {
-        // owner sending -> must be sending to renter
         if (toId === ownerId) return res.status(400).json({ ok: false, error: "Can't message yourself." });
         renterId = toId;
+
+        // Business rule: owners can only start or continue valid owner-renter threads for this car.
         const allowed = await ownerCanMessageRenter(db, cid, ownerId, renterId);
         if (!allowed) {
           return res.status(403).json({ ok: false, error: "Owner can only message renters with a booking or existing thread for this car." });
         }
       } else {
-        // renter sending -> must be sending to owner
         renterId = req.userId;
         if (toId !== ownerId) {
           return res.status(403).json({ ok: false, error: "Renter can only message the owner for this car." });
         }
       }
 
+      // DB side-effect: saves the message row inside the owner/renter conversation.
       await db.run(
         "INSERT INTO messages(car_id, owner_id, renter_id, sender_id, body) VALUES(?,?,?,?,?)",
         [cid, ownerId, renterId, req.userId, msg]
       );
 
-      // Get user details for email notification
       const sender = await db.get("SELECT display_name FROM users WHERE id = ?", [req.userId]);
       const recipient = await db.get("SELECT display_name, email FROM users WHERE id = ?", [toId]);
       const carDetails = await db.get("SELECT title, make, model, year FROM cars WHERE id = ?", [cid]);
 
-      // Notify receiver (in-app) //////
-      // Store car_id:sender_id in text so frontend can navigate to thread //
+      // DB side-effect: creates a message notification with enough data for the UI to reopen the thread.
       const notifText = `car_id:${cid}|from_user:${req.userId}|sender_name:${sender.display_name}|car_name:${carDetails.title || `${carDetails.year} ${carDetails.make} ${carDetails.model}`}`;
       await db.run(
         "INSERT INTO notifications(user_id, type, text) VALUES(?,?,?)",
         [toId, "message", notifText]
       );
 
-      // Send email notification
       await emailService.sendMessageNotification(recipient.email, sender.display_name, carDetails);
 
       return res.json({ ok: true });
@@ -228,13 +233,11 @@ export default function messageRoutes(db) {
   });
 
   // =============================================
-  // MARK MESSAGE READ ENDPOINT
+  // MARK MESSAGE READ
   // =============================================
 
-  // POST /api/messages/:id/read //
-  // Okay, let's mark this message as read ////
-  // Need: I'm logged in and actually in this conversation //////
-  // What changes: sets is_read flag (only for messages I received, not mine) //
+  // POST /api/messages/:id/read
+  // Marks one received message as read.
   r.post("/:id/read", requireAuth, async (req, res) => {
     try {
       const messageId = Number(req.params.id);
@@ -243,7 +246,6 @@ export default function messageRoutes(db) {
         return res.status(400).json({ ok: false, error: "Invalid message ID." });
       }
 
-      // Check if user is part of this message thread
       const message = await db.get(
         `SELECT m.id, m.car_id, m.owner_id, m.renter_id, m.sender_id
          FROM messages m
@@ -255,14 +257,12 @@ export default function messageRoutes(db) {
         return res.status(404).json({ ok: false, error: "Message not found." });
       }
 
-      // User must be either the owner or renter in this conversation
-      const userId = req.userId;
-      if (userId !== message.owner_id && userId !== message.renter_id) {
+      if (req.userId !== message.owner_id && req.userId !== message.renter_id) {
         return res.status(403).json({ ok: false, error: "Not allowed to mark this message as read." });
       }
 
-      // Mark as read (only if not sent by the current user)
-      if (message.sender_id !== userId) {
+      // Edge case: only mark messages read when they came from the other person.
+      if (message.sender_id !== req.userId) {
         await db.run("UPDATE messages SET is_read = 1 WHERE id = ?", [messageId]);
       }
 

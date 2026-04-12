@@ -1,4 +1,10 @@
 <!doctype html>
+<!--
+  Author:
+  Created on: January 11, 2026
+  Last updated: April 12, 2026
+  Purpose: Shows renter and owner booking history with actions for each booking.
+-->
 <html>
 <head>
   <meta charset="utf-8"/>
@@ -6,6 +12,9 @@
   <link rel="stylesheet" href="/style.css"/>
 </head>
 <body>
+  <!-- ============================================= -->
+  <!-- TOP NAV                                       -->
+  <!-- ============================================= -->
   <div class="topbar">
     <div class="topbarInner">
       <a class="brand" href="/"><span class="logoDot"></span>DriveShare</a>
@@ -20,6 +29,9 @@
   </div>
 
   <main class="wrap">
+    <!-- ============================================= -->
+    <!-- HISTORY PANEL                                 -->
+    <!-- ============================================= -->
     <div class="card section">
       <div class="flexBetweenTopWrap">
         <div>
@@ -36,8 +48,17 @@
 <script type="module">
 import { apiGet, apiPost, money, showToast } from "./ui.js";
 
+// =============================================
+// DOM
+// =============================================
+
 const historyContainer = document.getElementById('historyContainer');
 const mePill = document.getElementById('mePill');
+
+// =============================================
+// RENDER HELPERS
+// =============================================
+
 function renderReviewForm(booking) {
   return `
     <div class="card section mt10 noShadow">
@@ -100,6 +121,10 @@ function renderSection(title, bookings, role) {
   `;
 }
 
+// =============================================
+// LOAD HISTORY
+// =============================================
+
 async function loadHistory() {
   const user = await apiGet('/api/auth/me');
   if (!user.ok) {
@@ -120,6 +145,10 @@ async function loadHistory() {
     ${renderSection('Owner history', r.ownerBookings, 'owner')}
   `;
 }
+
+// =============================================
+// EVENTS
+// =============================================
 
 historyContainer.addEventListener('click', async (event) => {
   const payButton = event.target.closest('button[data-action="pay-booking"]');
