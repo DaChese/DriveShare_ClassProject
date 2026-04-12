@@ -1,18 +1,6 @@
 # DriveShare Pattern Documentation
 
-This document explains how DriveShare implements the six design patterns required by the course rubric. It is written to match the actual code in the project, not just a generic example.
-
-The rubric asks for:
-- clear identification of the required patterns
-- mapping from pattern roles to application classes
-- design documentation that matches the implemented model
-
-This write-up is organized that way.
-
 ## 1. Singleton Pattern
-
-### Why this pattern is in the rubric
-The rubric requires a Singleton pattern to manage the user's session securely.
 
 ### DriveShare class
 - `src/patterns/SessionManager.js`
@@ -27,9 +15,9 @@ The rubric requires a Singleton pattern to manage the user's session securely.
   - `src/routes/auth.js`
   - `src/middleware/auth.js`
 
-### Simple class diagram
+### class diagram
 
-```text
+```
 +----------------------+
 | SessionManager       |
 +----------------------+
@@ -53,9 +41,6 @@ The rubric requires a Singleton pattern to manage the user's session securely.
 - The `instance()` method enforces that shared access point.
 
 ## 2. Observer Pattern
-
-### Why this pattern is in the rubric
-The rubric requires an Observer pattern so renters can watch cars and get notifications when conditions are met.
 
 ### DriveShare file
 - `src/patterns/WatchNotifier.js`
@@ -115,9 +100,6 @@ When a car changes in a way that matters, the app calls `notifyWatchers(...)`. T
 
 ## 3. Mediator Pattern
 
-### Why this pattern is in the rubric
-The rubric requires a Mediator pattern to coordinate UI-related communication and create a cohesive interface.
-
 ### DriveShare class
 - `src/patterns/SearchMediator.js`
 
@@ -159,9 +141,6 @@ The renter search UI feeds several inputs into the same coordinated search flow,
 - The app has one central object deciding how search inputs work together.
 
 ## 4. Builder Pattern
-
-### Why this pattern is in the rubric
-The rubric requires a Builder pattern for clean construction of car listing objects with variable attributes.
 
 ### DriveShare class
 - `src/patterns/CarListingBuilder.js`
@@ -216,9 +195,6 @@ Owners create car listings through route logic that uses `CarListingBuilder`. Th
 
 ## 5. Proxy Pattern
 
-### Why this pattern is in the rubric
-The rubric requires a Proxy pattern to simulate secure interaction with a payment system.
-
 ### DriveShare classes
 - `src/patterns/PaymentProxy.js`
   - `PaymentProxy`
@@ -271,9 +247,6 @@ If those checks pass, the proxy forwards the call to `RealPaymentService`, which
 
 ## 6. Chain of Responsibility
 
-### Why this pattern is in the rubric
-The rubric requires a Chain of Responsibility for password recovery using the three security questions.
-
 ### DriveShare file
 - `src/patterns/PasswordRecoveryChain.js`
 
@@ -313,18 +286,6 @@ Password recovery is built as a chain of three handlers. Each handler checks one
 - The request moves from one handler to the next.
 - The flow stops immediately when one handler fails.
 
-## Pattern-to-Rubric Summary
-
-```text
-Rubric Requirement                         DriveShare Implementation
----------------------------------------------------------------------------
-Singleton for session management           SessionManager
-Observer for watch notifications           WatchNotifier / watches table
-Mediator for coordinated UI search flow    SearchMediator
-Builder for car listing creation           CarListingBuilder
-Proxy for payment simulation               PaymentProxy + RealPaymentService
-Chain of Responsibility for recovery       QuestionHandler chain
-```
 
 ## Where the Patterns Connect to Features
 
@@ -341,15 +302,6 @@ Chain of Responsibility for recovery       QuestionHandler chain
 
 ### Watch and Notifications
 - `WatchNotifier` checks watches and creates notifications when a watched car changes.
-
-## Design Consistency Notes
-
-This documentation was updated to match the current project code and rubric goals:
-- inbox-style messaging instead of manual ID-based messaging
-- pending booking plus explicit payment confirmation
-- owner and renter rental history
-- renter-to-car and owner-to-renter review flow
-- watch notifications for price and availability
 
 ## Related Files
 

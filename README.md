@@ -1,6 +1,6 @@
 # DriveShare
 
-DriveShare is a term project for CIS 476 Software Architecture and Design. It is a car-sharing web app built with Node.js, Express, SQLite, and vanilla HTML/CSS/JavaScript. The project was designed around the course rubric, so the app focuses on complete renter and owner workflows while also showing six required design patterns in a practical way.
+DriveShare is a term project for CIS 476 Software Architecture and Design. It is a car-sharing web app built with Node.js, Express, SQLite, and vanilla HTML/CSS/JavaScript. The project was designed around grueling weeks of coding and testing, so the app focuses on complete renter and owner workflows while also showing six design patterns in a practical way.
 
 ## Project Goal
 
@@ -8,7 +8,7 @@ The goal of DriveShare is to let:
 - owners list cars, manage price and availability, and communicate with renters
 - renters browse and search for cars, watch listings, book cars, pay, message owners, and review the experience
 
-The project also demonstrates the required design patterns from the rubric:
+The project also demonstrates the design patterns:
 - Singleton
 - Observer
 - Mediator
@@ -16,9 +16,6 @@ The project also demonstrates the required design patterns from the rubric:
 - Proxy
 - Chain of Responsibility
 
-## Rubric Coverage
-
-This section maps the project directly to the assignment requirements.
 
 ### User Registration and Authentication
 - Users register with email, password, and display name.
@@ -90,7 +87,6 @@ Main files:
 - The project uses a simulated payment step.
 - A renter clicks a payment button for a pending booking.
 - Payment changes balances, records the payment row, confirms the booking, and notifies both parties.
-- This satisfies the rubric requirement without using a real payment provider.
 
 Main files:
 - `src/routes/bookings.js`
@@ -108,9 +104,7 @@ Main files:
 - `src/routes/bookings.js`
 - `public/history.html`
 
-## Required Design Patterns
-
-The app uses all six patterns from the rubric.
+## Design Patterns
 
 ### 1. Singleton
 - Class: `SessionManager`
@@ -148,8 +142,6 @@ The app uses all six patterns from the rubric.
   - each security question is checked in sequence
   - the flow stops as soon as one answer fails
 
-For the full pattern write-up, see `PATTERN_DOCUMENTATION.md`.
-
 ## Tech Stack
 
 ### Backend
@@ -163,11 +155,11 @@ For the full pattern write-up, see `PATTERN_DOCUMENTATION.md`.
 ### Frontend
 - HTML
 - CSS
-- Vanilla JavaScript
+- JavaScript
 
 ## Main Pages
 
-- `/` - homepage with browse and quick search
+- `/` - root
 - `/login.html` - login
 - `/register.html` - registration
 - `/recover.html` - password recovery
@@ -255,7 +247,7 @@ http://localhost:3000
 
 ## Demo Data
 
-The project includes dev seed routes to help with class demos.
+The project includes dev seed routes to help with demos.
 
 Examples:
 
@@ -269,26 +261,14 @@ These routes create tagged demo cars for the logged-in owner so demo data can be
 
 ## Testing and Verification
 
-The current npm scripts are lightweight verification scripts:
+The current npm scripts are syntax-check verification scripts:
 
 ```bash
 npm test
 npm run test:edge
 ```
 
-Both scripts currently run `node --check` on the key backend files. That means they verify syntax, not full end-to-end behavior.
-
-For class/demo review, the main manual flows to verify are:
-- register a user with 3 security questions
-- log in and view the current user
-- create an owner car listing
-- browse and search as a renter
-- watch a car
-- create a booking
-- pay for the pending booking
-- send messages between renter and owner
-- open notifications
-- leave reviews in history
+Right now those commands run `node --check` on the main backend files. They help catch syntax errors, but they do not run end-to-end behavior tests for booking, payment, messaging, or search flows.
 
 ## Security Notes
 
@@ -300,7 +280,7 @@ For class/demo review, the main manual flows to verify are:
 
 ## Project Structure
 
-```text
+```
 DriveShare_ClassProject/
 |-- server.js
 |-- package.json
