@@ -27,9 +27,9 @@ This section maps the project directly to the assignment requirements.
 - Passwords and recovery answers are hashed with `bcryptjs`.
 
 Main files:
-- [src/routes/auth.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/routes/auth.js>)
-- [src/patterns/SessionManager.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/patterns/SessionManager.js>)
-- [src/patterns/PasswordRecoveryChain.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/patterns/PasswordRecoveryChain.js>)
+- `src/routes/auth.js`
+- `src/patterns/SessionManager.js`
+- `src/patterns/PasswordRecoveryChain.js`
 
 ### Car Listing and Management (Owner)
 - Owners can create car listings with:
@@ -46,10 +46,10 @@ Main files:
 - The app prevents overlapping rentals and blocks from colliding with bookings.
 
 Main files:
-- [src/routes/cars.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/routes/cars.js>)
-- [src/services/availability.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/services/availability.js>)
-- [src/patterns/CarListingBuilder.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/patterns/CarListingBuilder.js>)
-- [public/owner.html](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/public/owner.html>)
+- `src/routes/cars.js`
+- `src/services/availability.js`
+- `src/patterns/CarListingBuilder.js`
+- `public/owner.html`
 
 ### Search and Booking (Renter)
 - Renters can browse the full active inventory.
@@ -65,13 +65,13 @@ Main files:
 - The booking starts as `pending` and is confirmed after payment.
 
 Main files:
-- [src/routes/cars.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/routes/cars.js>)
-- [src/routes/bookings.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/routes/bookings.js>)
-- [src/patterns/SearchMediator.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/patterns/SearchMediator.js>)
-- [src/patterns/WatchNotifier.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/patterns/WatchNotifier.js>)
-- [public/index.html](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/public/index.html>)
-- [public/renter.html](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/public/renter.html>)
-- [public/car.html](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/public/car.html>)
+- `src/routes/cars.js`
+- `src/routes/bookings.js`
+- `src/patterns/SearchMediator.js`
+- `src/patterns/WatchNotifier.js`
+- `public/index.html`
+- `public/renter.html`
+- `public/car.html`
 
 ### Messaging and Communication
 - The app includes an inbox-style message system between owners and renters.
@@ -80,11 +80,11 @@ Main files:
 - Message notifications are sent in-app and email notifications can also be triggered.
 
 Main files:
-- [src/routes/messages.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/routes/messages.js>)
-- [src/routes/notifications.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/routes/notifications.js>)
-- [src/services/emailService.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/services/emailService.js>)
-- [public/messages.html](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/public/messages.html>)
-- [public/notifications.html](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/public/notifications.html>)
+- `src/routes/messages.js`
+- `src/routes/notifications.js`
+- `src/services/emailService.js`
+- `public/messages.html`
+- `public/notifications.html`
 
 ### Payment
 - The project uses a simulated payment step.
@@ -93,10 +93,10 @@ Main files:
 - This satisfies the rubric requirement without using a real payment provider.
 
 Main files:
-- [src/routes/bookings.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/routes/bookings.js>)
-- [src/patterns/PaymentProxy.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/patterns/PaymentProxy.js>)
-- [public/car.html](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/public/car.html>)
-- [public/history.html](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/public/history.html>)
+- `src/routes/bookings.js`
+- `src/patterns/PaymentProxy.js`
+- `public/car.html`
+- `public/history.html`
 
 ### Rental History and Reviews
 - Both renters and owners can view booking history.
@@ -105,8 +105,8 @@ Main files:
 - Reviews appear in the rental history flow and create notifications.
 
 Main files:
-- [src/routes/bookings.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/routes/bookings.js>)
-- [public/history.html](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/public/history.html>)
+- `src/routes/bookings.js`
+- `public/history.html`
 
 ## Required Design Patterns
 
@@ -148,7 +148,7 @@ The app uses all six patterns from the rubric.
   - each security question is checked in sequence
   - the flow stops as soon as one answer fails
 
-For the full pattern write-up, see [PATTERN_DOCUMENTATION.md](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/PATTERN_DOCUMENTATION.md>).
+For the full pattern write-up, see `PATTERN_DOCUMENTATION.md`.
 
 ## Tech Stack
 
@@ -346,9 +346,3 @@ DriveShare_ClassProject/
         |-- availability.js
         `-- emailService.js
 ```
-
-## Notes for Submission
-
-- The project documentation is organized around the course rubric.
-- The pattern documentation maps pattern roles to the actual DriveShare classes and files.
-- The code comments were cleaned up to match the project style and explain the main rules without changing behavior.

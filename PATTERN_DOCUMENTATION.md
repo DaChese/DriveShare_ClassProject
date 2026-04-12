@@ -15,7 +15,7 @@ This write-up is organized that way.
 The rubric requires a Singleton pattern to manage the user's session securely.
 
 ### DriveShare class
-- [src/patterns/SessionManager.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/patterns/SessionManager.js>)
+- `src/patterns/SessionManager.js`
 
 ### What it does in this project
 `SessionManager` stores login sessions in one shared in-memory map. Auth routes and auth middleware both use the same instance so session lookups stay consistent across the app.
@@ -58,7 +58,7 @@ The rubric requires a Singleton pattern to manage the user's session securely.
 The rubric requires an Observer pattern so renters can watch cars and get notifications when conditions are met.
 
 ### DriveShare file
-- [src/patterns/WatchNotifier.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/patterns/WatchNotifier.js>)
+- `src/patterns/WatchNotifier.js`
 
 ### What it does in this project
 DriveShare lets renters create watch records for a car. A watch can include:
@@ -119,7 +119,7 @@ When a car changes in a way that matters, the app calls `notifyWatchers(...)`. T
 The rubric requires a Mediator pattern to coordinate UI-related communication and create a cohesive interface.
 
 ### DriveShare class
-- [src/patterns/SearchMediator.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/patterns/SearchMediator.js>)
+- `src/patterns/SearchMediator.js`
 
 ### What it does in this project
 `SearchMediator` centralizes car browse and search rules. Instead of spreading search logic across many routes or UI files, the app sends filter criteria into one mediator that coordinates:
@@ -129,7 +129,7 @@ The rubric requires a Mediator pattern to coordinate UI-related communication an
 - overlap filtering against bookings and availability blocks
 - validation of search input
 
-The frontend also reflects this mediator idea because the renter search UI combines several inputs into one coordinated search flow.
+The renter search UI feeds several inputs into the same coordinated search flow, and the mediator keeps those rules together instead of spreading them across routes and pages.
 
 ### Pattern role mapping
 - Mediator: `SearchMediator`
@@ -164,7 +164,7 @@ The frontend also reflects this mediator idea because the renter search UI combi
 The rubric requires a Builder pattern for clean construction of car listing objects with variable attributes.
 
 ### DriveShare class
-- [src/patterns/CarListingBuilder.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/patterns/CarListingBuilder.js>)
+- `src/patterns/CarListingBuilder.js`
 
 ### What it does in this project
 Owners create car listings through route logic that uses `CarListingBuilder`. The builder starts with base defaults, then fills in the car data step by step before returning the final listing object to insert into the database.
@@ -220,7 +220,7 @@ Owners create car listings through route logic that uses `CarListingBuilder`. Th
 The rubric requires a Proxy pattern to simulate secure interaction with a payment system.
 
 ### DriveShare classes
-- [src/patterns/PaymentProxy.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/patterns/PaymentProxy.js>)
+- `src/patterns/PaymentProxy.js`
   - `PaymentProxy`
   - `RealPaymentService`
 
@@ -275,7 +275,7 @@ If those checks pass, the proxy forwards the call to `RealPaymentService`, which
 The rubric requires a Chain of Responsibility for password recovery using the three security questions.
 
 ### DriveShare file
-- [src/patterns/PasswordRecoveryChain.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/patterns/PasswordRecoveryChain.js>)
+- `src/patterns/PasswordRecoveryChain.js`
 
 ### What it does in this project
 Password recovery is built as a chain of three handlers. Each handler checks one question index. If the current answer is correct, the request moves to the next handler. If any answer fails, the whole recovery flow stops.
@@ -353,9 +353,9 @@ This documentation was updated to match the current project code and rubric goal
 
 ## Related Files
 
-- [README.md](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/README.md>)
-- [src/routes/auth.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/routes/auth.js>)
-- [src/routes/cars.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/routes/cars.js>)
-- [src/routes/bookings.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/routes/bookings.js>)
-- [src/routes/messages.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/routes/messages.js>)
-- [src/routes/notifications.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/routes/notifications.js>)
+- `README.md`
+- `src/routes/auth.js`
+- `src/routes/cars.js`
+- `src/routes/bookings.js`
+- `src/routes/messages.js`
+- `src/routes/notifications.js`
