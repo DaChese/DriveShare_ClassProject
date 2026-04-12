@@ -2,8 +2,7 @@
 node_modules/
 package-lock.json
 
-# Environment test files
-.env.local
+
 
 # Virtual environments when testing or developing locally
 .venv/
