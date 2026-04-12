@@ -2,18 +2,12 @@
 node_modules/
 package-lock.json
 
-# Environment!
-.env
+# Environment test files
 .env.local
 
 # Virtual environments when testing or developing locally
 .venv/
 ve
-
-# Database files (dev only)
-*.sqlite
-*.sqlite3
-*.db
 
 
 # OS files
