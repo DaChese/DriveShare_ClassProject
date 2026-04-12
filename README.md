@@ -227,7 +227,7 @@ npm install
 npm run initdb
 ```
 
-This step is important because the project a lightweight schema updates in `scripts/init_db.js`. Running it applies the current schema to an existing `driveshare.sqlite` file.
+This step is important because the project uses a lightweight schema updates in `scripts/init_db.js`. Running it applies the current schema to an existing `driveshare.sqlite` file.
 
 ### 3. Start the server
 
