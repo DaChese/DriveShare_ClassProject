@@ -2,7 +2,7 @@
  * Author:
  * Created on: January 11, 2026
  * Last updated: April 12, 2026
- * Purpose: Creates the database schema and applies simple column migrations.
+ * Purpose: Creates the database schema and applies a column migrations.
  */
 
 // =============================================
