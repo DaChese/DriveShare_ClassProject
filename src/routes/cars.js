@@ -60,7 +60,7 @@ export default function carRoutes(db) {
   // =============================================
 
   // GET /api/cars/browse
-  // Returns available active cars with optional location and price filters.
+  // Returns available active cars with optional location and price filters //
   r.get("/browse", async (req, res) => {
     const { location, maxPrice, limit } = req.query || {};
 
@@ -84,7 +84,7 @@ export default function carRoutes(db) {
   // =============================================
 
   // GET /api/cars/search
-  // Expects location, start, end, and optional maxPrice.
+  //// Expects location, start, end, and optional maxPrice ///
   r.get("/search", async (req, res) => {
     const { location, start, end, maxPrice } = req.query || {};
 
@@ -110,7 +110,7 @@ export default function carRoutes(db) {
   // =============================================
 
   // GET /api/cars/mine/list
-  // Returns the logged-in owner's cars.
+  // Returns the logged-in owner's cars ///
   r.get("/mine/list", requireAuth, async (req, res) => {
     const rows = await db.all(
       `SELECT * FROM cars
@@ -161,7 +161,7 @@ export default function carRoutes(db) {
   // =============================================
 
   // POST /api/cars/:id/blocks
-  // Owner blocks out a date range for maintenance or personal use.
+  // Owner blocks out a date range for maintenance or personal use //
   r.post("/:id/blocks", requireAuth, async (req, res) => {
     const carId = Number(req.params.id);
     const { startDate, endDate, reason } = req.body || {};
@@ -180,7 +180,7 @@ export default function carRoutes(db) {
       return res.status(400).json({ ok: false, error: "endDate must be after startDate." });
     }
 
-    // Blocks cannot overlap existing pending or confirmed bookings, or other blocks.
+    // Business rule: blocks cannot overlap existing pending/confirmed bookings or other blocks.
     const current = await listBlocksAndBookings(db, carId);
 
     for (const b of current.bookings || []) {
@@ -202,7 +202,7 @@ export default function carRoutes(db) {
       }
     }
 
-    // Saves the manual block and notifies matching watchers.
+    // DB side-effect: saves the manual block and notifies matching watchers.
     await db.run(
       "INSERT INTO availability_blocks(car_id, start_date, end_date, reason) VALUES(?,?,?,?)",
       [carId, s, e, reason ? String(reason) : null]
@@ -263,7 +263,7 @@ export default function carRoutes(db) {
 
     const car = builder.build();
 
-    // Inserts the new listing and forces it active by default.
+    // DB side-effect: inserts the new listing and forces it active by default.
     const result = await db.run(
       `INSERT INTO cars(owner_id,title,make,model,year,mileage,pickup_location,price_per_day_cents,active,updated_at)
        VALUES(?,?,?,?,?,?,?,?,?,?)`,
@@ -300,7 +300,7 @@ export default function carRoutes(db) {
     const cents = toCentsFromDollars(pricePerDay);
     if (cents == null) return res.status(400).json({ ok: false, error: "Invalid pricePerDay." });
 
-    // Updates price and then notifies watchers about the change.
+    // DB side-effect: updates price and then notifies watchers about the change.
     await db.run("UPDATE cars SET price_per_day_cents = ?, updated_at = datetime('now') WHERE id = ?", [cents, carId]);
 
     await notifyWatchers(db, carId, `Price drop/update: car #${carId} is now $${(cents / 100).toFixed(2)}/day`);
@@ -358,7 +358,7 @@ export default function carRoutes(db) {
       return res.status(400).json({ ok: false, error: "watchEndDate must be after watchStartDate." });
     }
 
-    // Inserts or updates the user's watch settings for this car.
+    // DB side-effect: inserts or updates the user's watch settings for this car.
     await db.run(
       `INSERT OR REPLACE INTO watches(user_id, car_id, max_price_per_day_cents, watch_start_date, watch_end_date)
        VALUES(?,?,?,?,?)`,
