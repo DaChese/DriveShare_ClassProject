@@ -262,7 +262,7 @@ npm test
 npm run test:edge
 ```
 
-Right now those commands run `node --check` on the main backend files. They help catch syntax errors, but they do not run end-to-end behavior tests for booking, payment, messaging, or search flows.
+Right now those commands run `node --check` on the main backend files. They help catch syntax errors, but they do not run end-to-end behavior tests for booking, payment, messaging, or search flows, that is tested manually.
 
 ## Security Notes
 
