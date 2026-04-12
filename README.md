@@ -255,17 +255,6 @@ GET /api/dev/seed-status
 
 These routes create tagged demo cars for the logged-in owner so demo data can be reset without wiping the whole database.
 
-## Testing and Verification
-
-The current npm scripts are syntax checks:
-
-```bash
-npm test
-npm run test:edge
-```
-
-Right now those commands run `node --check` on the main backend files. They help catch syntax errors, but they do not run end-to-end behavior tests for booking, payment, messaging, or search flows, that is tested manually.
-
 ## Security Notes
 
 - Passwords are hashed with `bcryptjs`.
