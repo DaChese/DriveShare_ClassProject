@@ -276,7 +276,7 @@
       const maxPrice = parseMaxPrice();
       const useSearch = Boolean(loc && start && end);
 
-      // Business rule: location + both dates switches the page into trip-search mode.
+      // Use trip-search mode only when location and both dates are filled in.
       const url = useSearch
         ? "/api/cars/search?location=" + encodeURIComponent(loc) +
           "&start=" + encodeURIComponent(start) +

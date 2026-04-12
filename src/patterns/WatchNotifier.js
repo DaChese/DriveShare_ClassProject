@@ -27,7 +27,7 @@ export async function notifyWatchers(db, carId, eventText) {
   );
 
   for (const w of watches) {
-    // Skip this watcher if the current car price is still above their target.
+    // skip this watcher if the current car price is still above their target ///
     if (w.max_price_per_day_cents != null && car.price_per_day_cents != null) {
       if (car.price_per_day_cents > w.max_price_per_day_cents) continue;
     }
@@ -40,7 +40,7 @@ export async function notifyWatchers(db, carId, eventText) {
       if (overlapped) continue;
     }
 
-    // DB side-effect: creates one in-app notification for each watcher that matches.
+    // this creates one in-app notification for each watcher that matches. ///////
     await db.run(
       "INSERT INTO notifications(user_id, type, text) VALUES(?,?,?)",
       [w.user_id, "watch", eventText]

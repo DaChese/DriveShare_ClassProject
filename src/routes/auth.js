@@ -37,14 +37,14 @@ export default function authRoutes(db) {
     const password_hash = bcrypt.hashSync(String(password), 10);
 
     try {
-      // DB side-effect: creates the user row first so the security questions can point to it.
+      // creates the user row first so the security questions can point to it ///////
       const result = await db.run(
         "INSERT INTO users(email, password_hash, display_name) VALUES(?,?,?)",
         [String(email).toLowerCase(), password_hash, String(displayName)]
       );
       const userId = result.lastID;
 
-      // Business rule: all 3 security questions must be saved during registration.
+      ///// all 3 security questions must be saved during registration.
       for (let i = 0; i < 3; i++) {
         const q = questions[i];
         const qIndex = i + 1;
@@ -56,7 +56,7 @@ export default function authRoutes(db) {
         );
       }
 
-      // DB side-effect: creates a login session right after successful registration.
+      // Creates a login session right after successful registration.
       const sid = SessionManager.instance().createSession(userId);
       res.cookie("sid", sid, { httpOnly: true });
       return res.json({ ok: true, userId });
@@ -70,7 +70,7 @@ export default function authRoutes(db) {
   // =============================================
 
   // POST /auth/login
-  // Expects email and password, then returns a session cookie on success.
+  ///// expects email and password, then returns a session cookie on success ///////
   r.post("/login", async (req, res) => {
     const { email, password } = req.body || {};
     const row = await db.get("SELECT id, password_hash FROM users WHERE email = ?", [String(email).toLowerCase()]);
@@ -102,7 +102,7 @@ export default function authRoutes(db) {
   // =============================================
 
   // GET /auth/me
-  // Returns the logged-in user's profile summary.
+  //// Returns the logged-in user's profile summary //////
   r.get("/me", async (req, res) => {
     const sid = req.cookies.sid;
     const userId = sid ? SessionManager.instance().getUserId(sid) : null;
@@ -117,21 +117,21 @@ export default function authRoutes(db) {
   // =============================================
 
   // POST /auth/recover
-  // Expects email, answers, and optional newPassword.
+  // Expects email, answers, and optional newPassword for resetting after verification //////
   r.post("/recover", async (req, res) => {
     const { email, answers, newPassword } = req.body || {};
     const user = await db.get("SELECT id FROM users WHERE email = ?", [String(email).toLowerCase()]);
     if (!user) return res.status(404).json({ ok: false, error: "User not found." });
 
-    // Business rule: all 3 answers must pass the recovery chain before reset is allowed.
+    ///// so all 3 answers must pass the recovery chain before reset is allowed ///////
     const chain = buildRecoveryChain();
     const result = await chain.handle(db, user.id, answers || {});
     if (!result.ok) return res.status(401).json(result);
 
-    // Edge case: this lets the UI verify answers first before sending the new password.
+    // so this lets the UI verify answers first before sending the new password ////////
     if (!newPassword) return res.json({ ok: true, message: "Answers verified. Provide newPassword to reset." });
 
-    // DB side-effect: replaces the stored password hash after recovery succeeds.
+    ///// replaces the stored password hash after recovery succeeds /////
     const password_hash = bcrypt.hashSync(String(newPassword), 10);
     await db.run("UPDATE users SET password_hash = ? WHERE id = ?", [password_hash, user.id]);
     return res.json({ ok: true, message: "Password reset." });

@@ -1,9 +1,10 @@
-// =============================================
-// FILE: devSeed.js
-// Development seeding routes (demo car data)
-// Created: 2024-12-19
-// Updated: 2026-04-11
-// =============================================
+/*
+ * Author:
+ * Created on: January 11, 2026
+ * Last updated: April 12, 2026
+ * Purpose: a batch of routes to help seed and manage demo car listings for development and testing purposes.
+ * These routes are protected and only operate on the logged-in user's inventory, so they can be used safely without affecting other users.
+ */
 
 import express from "express";
 import { requireAuth } from "../middleware/auth.js";

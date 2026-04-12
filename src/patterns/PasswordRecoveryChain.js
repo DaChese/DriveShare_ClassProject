@@ -32,7 +32,7 @@ class QuestionHandler {
       [userId, this.qIndex]
     );
 
-    // Edge case: recovery fails immediately if the stored question is missing.
+    // Stop the recovery flow if the stored question is missing.
     if (!row) {
       return { ok: false, error: "Missing security question." };
     }
@@ -43,7 +43,7 @@ class QuestionHandler {
       return { ok: false, error: `Security question ${this.qIndex} failed.` };
     }
 
-    // Business rule: all handlers in the chain must pass before recovery succeeds.
+    // Every handler in the chain has to pass before recovery succeeds.
     if (this.next) {
       return await this.next.handle(db, userId, providedAnswers);
     }

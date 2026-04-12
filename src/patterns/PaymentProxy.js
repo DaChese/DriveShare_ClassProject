@@ -11,7 +11,7 @@
 
 export class RealPaymentService {
   async pay(db, bookingId, payerId, payeeId, amountCents) {
-    // DB side-effect: subtracts the renter balance, adds the owner balance, records payment, and confirms booking.
+    // Subtracts the renter balance, adds the owner balance, records payment, and confirms booking.
     await db.run("UPDATE users SET balance_cents = balance_cents - ? WHERE id = ?", [amountCents, payerId]);
     await db.run("UPDATE users SET balance_cents = balance_cents + ? WHERE id = ?", [amountCents, payeeId]);
 
@@ -35,7 +35,7 @@ export class PaymentProxy {
   }
 
   async pay(db, sessionUserId, bookingId, payerId, payeeId, amountCents) {
-    // Business rule: only the logged-in payer can pay from their own account.
+    /// only the logged-in payer can pay from their own account.
     if (!sessionUserId) {
       return { ok: false, error: "Not logged in." };
     }

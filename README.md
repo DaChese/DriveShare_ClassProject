@@ -1,217 +1,354 @@
-DriveShare (Term Project) - Complete Implementation (Node + Express + SQLite)
-============================================================================
+# DriveShare
 
-A comprehensive car rental platform demonstrating advanced software design patterns and modern web development practices.
+DriveShare is a term project for CIS 476 Software Architecture and Design. It is a car-sharing web app built with Node.js, Express, SQLite, and vanilla HTML/CSS/JavaScript. The project was designed around the course rubric, so the app focuses on complete renter and owner workflows while also showing six required design patterns in a practical way.
 
-## Features Implemented
+## Project Goal
 
-### Core Functionality
-- **User Authentication**: Registration, login, password recovery with security questions
-- **Car Listings**: Create, browse, search, and manage car rental listings
-- **Booking System**: Request bookings, confirm payments, manage availability
-- **Messaging**: Real-time communication between renters and owners
-- **Notifications**: In-app notifications for all user activities
-- **Watch Lists**: Price and availability monitoring with smart notifications
-- **Reviews & History**: Complete rental history with review system
-- **Email Notifications**: Automated email alerts for all major events
+The goal of DriveShare is to let:
+- owners list cars, manage price and availability, and communicate with renters
+- renters browse and search for cars, watch listings, book cars, pay, message owners, and review the experience
 
-### Design Patterns (6 Required Patterns)
+The project also demonstrates the required design patterns from the rubric:
+- Singleton
+- Observer
+- Mediator
+- Builder
+- Proxy
+- Chain of Responsibility
 
-1. **Singleton Pattern** - `SessionManager`
-   - Manages user sessions across the application
-   - Ensures single instance throughout application lifecycle
-   - Provides global access to session state
+## Rubric Coverage
 
-2. **Observer Pattern** - `WatchNotifier`
-   - Notifies users when car prices/availability change
-   - Decouples car updates from user notifications
-   - Supports multiple observers per subject
+This section maps the project directly to the assignment requirements.
 
-3. **Mediator Pattern** - `SearchMediator`
-   - Centralizes complex car search logic
-   - Coordinates location, date, and price filtering
-   - Simplifies search API and improves maintainability
+### User Registration and Authentication
+- Users register with email, password, and display name.
+- Registration requires exactly 3 security questions with answers.
+- Users can log in, log out, and recover a password by answering those 3 questions.
+- Passwords and recovery answers are hashed with `bcryptjs`.
 
-4. **Builder Pattern** - `CarListingBuilder`
-   - Fluent interface for constructing car listing objects
-   - Handles optional parameters and validation
-   - Provides readable, maintainable object creation
+Main files:
+- [src/routes/auth.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/routes/auth.js>)
+- [src/patterns/SessionManager.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/patterns/SessionManager.js>)
+- [src/patterns/PasswordRecoveryChain.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/patterns/PasswordRecoveryChain.js>)
 
-5. **Proxy Pattern** - `PaymentProxy`
-   - Security layer around payment processing
-   - Validates authorization and input before processing
-   - Adds logging and monitoring capabilities
+### Car Listing and Management (Owner)
+- Owners can create car listings with:
+  - title
+  - make/model/year
+  - mileage
+  - pickup location
+  - rental price
+- Owners can:
+  - view their own listings
+  - change listing price
+  - toggle active status
+  - add and remove availability blocks
+- The app prevents overlapping rentals and blocks from colliding with bookings.
 
-6. **Chain of Responsibility** - `PasswordRecoveryChain`
-   - Sequential validation of security questions
-   - Fail-fast processing with clear error messages
-   - Extensible question chain architecture
+Main files:
+- [src/routes/cars.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/routes/cars.js>)
+- [src/services/availability.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/services/availability.js>)
+- [src/patterns/CarListingBuilder.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/patterns/CarListingBuilder.js>)
+- [public/owner.html](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/public/owner.html>)
 
-## Testing & Validation
+### Search and Booking (Renter)
+- Renters can browse the full active inventory.
+- Renters can search cars by:
+  - location
+  - start date
+  - end date
+  - max price
+- Renters can watch a car and get notified when:
+  - the price drops to their target
+  - the car becomes available for the watched date range
+- Renters can create a booking for a specific period.
+- The booking starts as `pending` and is confirmed after payment.
 
-### Recent Fixes (April 2026)
-- **Review System**: Fixed review logic so renters review cars and owners review renters (not owners reviewing owners)
-- **Message Read Status**: Added `is_read` field to messages table and `/api/messages/:id/read` endpoint
-- **Database Schema**: Updated reviews table with `reviewee_type` field to support both user and car reviews
-- **Migration System**: Enhanced database migration to handle schema updates without data loss
+Main files:
+- [src/routes/cars.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/routes/cars.js>)
+- [src/routes/bookings.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/routes/bookings.js>)
+- [src/patterns/SearchMediator.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/patterns/SearchMediator.js>)
+- [src/patterns/WatchNotifier.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/patterns/WatchNotifier.js>)
+- [public/index.html](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/public/index.html>)
+- [public/renter.html](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/public/renter.html>)
+- [public/car.html](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/public/car.html>)
 
-### Comprehensive Edge Case Testing
-The project includes a robust test suite (`edge_case_tests.js`) that validates all implementations:
+### Messaging and Communication
+- The app includes an inbox-style message system between owners and renters.
+- Conversations are tied to a specific car.
+- Owners can only message renters who are actually tied to that car by a booking or an existing valid thread.
+- Message notifications are sent in-app and email notifications can also be triggered.
 
-**Test Coverage:**
-- **Authentication Edge Cases**: Invalid emails, missing fields, wrong security question count
-- **Search & Browse**: Invalid dates, malformed prices, boundary conditions
-- **Booking System**: Authentication requirements, invalid car IDs, missing parameters
-- **Notifications & Messages**: Access control, non-existent resources
-- **Payment Processing**: Authorization checks, invalid booking references
-- **Review System**: Rating validation (1-5 scale), authentication
-- **Database Constraints**: Duplicate prevention, foreign key validation
-- **Performance**: Concurrent requests, large payloads
-- **Security**: SQL injection prevention, XSS handling
+Main files:
+- [src/routes/messages.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/routes/messages.js>)
+- [src/routes/notifications.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/routes/notifications.js>)
+- [src/services/emailService.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/services/emailService.js>)
+- [public/messages.html](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/public/messages.html>)
+- [public/notifications.html](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/public/notifications.html>)
 
-**Test Results:** 21/21 tests passing (100% success rate)
+### Payment
+- The project uses a simulated payment step.
+- A renter clicks a payment button for a pending booking.
+- Payment changes balances, records the payment row, confirms the booking, and notifies both parties.
+- This satisfies the rubric requirement without using a real payment provider.
 
-Run edge case tests:
-```bash
-npm run test:edge
-```
+Main files:
+- [src/routes/bookings.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/routes/bookings.js>)
+- [src/patterns/PaymentProxy.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/patterns/PaymentProxy.js>)
+- [public/car.html](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/public/car.html>)
+- [public/history.html](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/public/history.html>)
 
-### API Testing
-Basic functionality tests are available in `test_implementations.js`:
-```bash
-npm test
-```
+### Rental History and Reviews
+- Both renters and owners can view booking history.
+- The renter can review the car.
+- The owner can review the renter.
+- Reviews appear in the rental history flow and create notifications.
 
-## Technical Architecture
+Main files:
+- [src/routes/bookings.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/routes/bookings.js>)
+- [public/history.html](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/public/history.html>)
+
+## Required Design Patterns
+
+The app uses all six patterns from the rubric.
+
+### 1. Singleton
+- Class: `SessionManager`
+- Why it fits:
+  - there should be one shared session store
+  - auth routes and middleware all use the same instance
+
+### 2. Observer
+- Class/function: `notifyWatchers` in `WatchNotifier`
+- Why it fits:
+  - renters subscribe to car conditions with watch settings
+  - car changes trigger notifications to matching watchers
+
+### 3. Mediator
+- Class: `SearchMediator`
+- Why it fits:
+  - search and browse rules are centralized in one place
+  - location, dates, and price filters are coordinated there
+
+### 4. Builder
+- Class: `CarListingBuilder`
+- Why it fits:
+  - owner listing objects are constructed step by step
+  - optional and standard fields are assembled in one fluent builder
+
+### 5. Proxy
+- Classes: `PaymentProxy` and `RealPaymentService`
+- Why it fits:
+  - the proxy checks who is paying and validates the amount
+  - only then does it forward the payment to the real service
+
+### 6. Chain of Responsibility
+- Classes/functions: `QuestionHandler` and `buildRecoveryChain`
+- Why it fits:
+  - each security question is checked in sequence
+  - the flow stops as soon as one answer fails
+
+For the full pattern write-up, see [PATTERN_DOCUMENTATION.md](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/PATTERN_DOCUMENTATION.md>).
+
+## Tech Stack
 
 ### Backend
-- **Framework**: Node.js + Express.js
-- **Database**: SQLite with proper schema design
-- **Authentication**: Session-based with bcrypt password hashing
-- **Email**: Nodemailer integration for notifications
-- **Security**: Input validation, SQL injection prevention, authorization checks
+- Node.js
+- Express
+- SQLite
+- `bcryptjs`
+- `uuid`
+- `nodemailer`
 
 ### Frontend
-- **Technology**: Vanilla JavaScript + HTML + CSS
-- **Architecture**: Component-based UI with event-driven interactions
-- **Responsive**: Mobile-friendly design with modern CSS
+- HTML
+- CSS
+- Vanilla JavaScript
 
-### Code Quality
-- **Documentation**: Comprehensive JSDoc comments throughout
-- **Patterns**: Detailed pattern documentation with class diagrams
-- **Structure**: Clean separation of concerns with MVC architecture
-- **Error Handling**: Proper error responses and logging
+## Main Pages
 
-## Setup Instructions
+- `/` - homepage with browse and quick search
+- `/login.html` - login
+- `/register.html` - registration
+- `/recover.html` - password recovery
+- `/owner.html` - owner listing management
+- `/renter.html` - renter search page
+- `/car.html?id=ID` - car details, booking, watch, and payment flow
+- `/messages.html` - inbox and conversation threads
+- `/notifications.html` - in-app notifications
+- `/history.html` - booking history, payment actions, and reviews
 
-### Prerequisites
-- Node.js (v16 or higher)
-- npm package manager
+## API Summary
 
-### Installation
+### Auth
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET /api/auth/me`
+- `POST /api/auth/recover`
+
+### Cars
+- `GET /api/cars/browse`
+- `GET /api/cars/search`
+- `GET /api/cars/mine/list`
+- `GET /api/cars/:id`
+- `GET /api/cars/:id/calendar`
+- `POST /api/cars/:id/blocks`
+- `POST /api/cars/:id/blocks/:blockId/delete`
+- `POST /api/cars`
+- `POST /api/cars/:id/price`
+- `POST /api/cars/:id/active`
+- `POST /api/cars/:id/watch`
+
+### Bookings
+- `POST /api/bookings`
+- `POST /api/bookings/:id/pay`
+- `POST /api/bookings/:id/cancel`
+- `GET /api/bookings/history`
+- `POST /api/bookings/:id/review`
+
+### Messages
+- `GET /api/messages/conversations`
+- `GET /api/messages/thread`
+- `POST /api/messages`
+- `POST /api/messages/:id/read`
+
+### Notifications
+- `GET /api/notifications`
+- `POST /api/notifications/:id/read`
+
+### Other
+- `GET /api/users/:id`
+- `GET /api/photos/unsplash`
+- `GET /api/dev/seed-status`
+- `POST /api/dev/seed-cars`
+- `POST /api/dev/clear-seeded-cars`
+- `POST /api/dev/reset-seeded-cars`
+
+## Setup
+
+### 1. Install dependencies
+
 ```bash
-# Install dependencies
 npm install
+```
 
-# Initialize database
+### 2. Initialize the database
+
+```bash
 npm run initdb
+```
 
-# Start development server
+This step is important because the project now uses lightweight schema updates in `scripts/init_db.js`. Running it applies the current schema to an existing `driveshare.sqlite` file.
+
+### 3. Start the server
+
+```bash
 npm run dev
 ```
 
-### Access Application
-- Main Application: http://localhost:3000
-- Car Details: /car.html?id=ID
-- Owner Dashboard: /owner.html
-- Renter Dashboard: /renter.html
-- Messages: /messages.html
-- History: /history.html
+Then open:
 
-## API Endpoints
-
-### Authentication
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User login
-- `POST /api/auth/recover` - Password recovery
-
-### Cars
-- `GET /api/cars/browse` - Browse cars without dates
-- `GET /api/cars/search` - Search with location and dates
-- `POST /api/cars` - Create car listing
-- `GET /api/cars/:id` - Get car details
-
-### Bookings
-- `POST /api/bookings` - Create booking request
-- `POST /api/bookings/:id/pay` - Process payment
-- `POST /api/bookings/:id/cancel` - Cancel booking
-- `GET /api/bookings/history` - Get rental history
-- `POST /api/bookings/:id/review` - Submit review
-
-### Messaging
-- `GET /api/messages/thread` - Get message thread
-- `POST /api/messages` - Send message
-
-### Notifications
-- `GET /api/notifications` - Get user notifications
-- `POST /api/notifications/:id/read` - Mark as read
-
-## Design Pattern Documentation
-
-See `PATTERN_DOCUMENTATION.md` for comprehensive documentation including:
-- Detailed pattern explanations
-- Class diagrams and role mappings
-- Implementation examples
-- Integration points
-- Quality attributes addressed
-
-## Development Notes
-
-### Email Configuration
-Email notifications are configured for demo mode by default. To enable real emails:
-```bash
-# Set environment variables
-export SMTP_HOST=smtp.gmail.com
-export SMTP_PORT=587
-export SMTP_USER=your-email@gmail.com
-export SMTP_PASS=your-app-password
-export EMAIL_ENABLED=true
+```text
+http://localhost:3000
 ```
 
-### Database Schema
-The application uses SQLite with the following key tables:
-- `users` - User accounts and profiles
-- `cars` - Car listings with pricing and details
-- `bookings` - Rental bookings and status
-- `messages` - Inter-user communication
-- `notifications` - In-app notification system
-- `reviews` - User reviews and ratings
+## Demo Data
 
-### Security Features
-- Password hashing with bcrypt
-- Session-based authentication
-- Input validation and sanitization
-- SQL injection prevention
-- Authorization checks on all endpoints
-- Security question validation for password recovery
+The project includes dev seed routes to help with class demos.
+
+Examples:
+
+```bash
+POST /api/dev/seed-cars
+POST /api/dev/reset-seeded-cars
+GET /api/dev/seed-status
+```
+
+These routes create tagged demo cars for the logged-in owner so demo data can be reset without wiping the whole database.
+
+## Testing and Verification
+
+The current npm scripts are lightweight verification scripts:
+
+```bash
+npm test
+npm run test:edge
+```
+
+Both scripts currently run `node --check` on the key backend files. That means they verify syntax, not full end-to-end behavior.
+
+For class/demo review, the main manual flows to verify are:
+- register a user with 3 security questions
+- log in and view the current user
+- create an owner car listing
+- browse and search as a renter
+- watch a car
+- create a booking
+- pay for the pending booking
+- send messages between renter and owner
+- open notifications
+- leave reviews in history
+
+## Security Notes
+
+- Passwords are hashed with `bcryptjs`.
+- Recovery answers are hashed with `bcryptjs`.
+- Sessions use an in-memory singleton session manager.
+- Authenticated routes use middleware checks.
+- Owner/renter actions are checked before bookings, payments, and messages are allowed.
 
 ## Project Structure
+
+```text
+DriveShare_ClassProject/
+|-- server.js
+|-- package.json
+|-- README.md
+|-- PATTERN_DOCUMENTATION.md
+|-- driveshare.sqlite
+|-- db/
+|   `-- schema.sql
+|-- public/
+|   |-- index.html
+|   |-- owner.html
+|   |-- renter.html
+|   |-- car.html
+|   |-- messages.html
+|   |-- notifications.html
+|   |-- history.html
+|   |-- login.html
+|   |-- register.html
+|   `-- recover.html
+|-- scripts/
+|   `-- init_db.js
+`-- src/
+    |-- db.js
+    |-- middleware/
+    |   `-- auth.js
+    |-- patterns/
+    |   |-- SessionManager.js
+    |   |-- WatchNotifier.js
+    |   |-- SearchMediator.js
+    |   |-- CarListingBuilder.js
+    |   |-- PaymentProxy.js
+    |   `-- PasswordRecoveryChain.js
+    |-- routes/
+    |   |-- auth.js
+    |   |-- bookings.js
+    |   |-- cars.js
+    |   |-- messages.js
+    |   |-- notifications.js
+    |   |-- users.js
+    |   |-- photos.js
+    |   `-- devSeed.js
+    `-- services/
+        |-- availability.js
+        `-- emailService.js
 ```
-driveshare/
-├── server.js                 # Main application server
-├── src/
-│   ├── db.js                # Database connection and utilities
-│   ├── routes/              # API route handlers
-│   ├── patterns/            # Design pattern implementations
-│   ├── services/            # Business logic services
-│   └── middleware/          # Express middleware
-├── public/                  # Frontend assets
-├── db/
-│   └── schema.sql          # Database schema
-└── scripts/
-    └── init_db.js          # Database initialization
-```
 
-This implementation demonstrates professional software engineering practices with comprehensive pattern usage, thorough documentation, and production-ready code quality.
+## Notes for Submission
 
-
+- The project documentation is organized around the course rubric.
+- The pattern documentation maps pattern roles to the actual DriveShare classes and files.
+- The code comments were cleaned up to match the project style and explain the main rules without changing behavior.

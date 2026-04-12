@@ -1,456 +1,361 @@
-# DriveShare Design Patterns Documentation
+# DriveShare Pattern Documentation
 
-## Overview
+This document explains how DriveShare implements the six design patterns required by the course rubric. It is written to match the actual code in the project, not just a generic example.
 
-DriveShare implements six fundamental design patterns as required for the Software Architecture and Design course. Each pattern is carefully integrated into the application architecture to demonstrate real-world usage and best practices.
+The rubric asks for:
+- clear identification of the required patterns
+- mapping from pattern roles to application classes
+- design documentation that matches the implemented model
 
-## 1. Singleton Pattern - SessionManager
+This write-up is organized that way.
 
-### Purpose
-The SessionManager ensures that only one instance of session management exists throughout the application lifecycle, providing centralized session state management.
+## 1. Singleton Pattern
 
-### Implementation
-```javascript
-class SessionManager {
-  constructor() {
-    if (SessionManager.instance) {
-      return SessionManager.instance;
-    }
-    this.sessions = new Map();
-    SessionManager.instance = this;
-  }
+### Why this pattern is in the rubric
+The rubric requires a Singleton pattern to manage the user's session securely.
 
-  static getInstance() {
-    if (!SessionManager.instance) {
-      SessionManager.instance = new SessionManager();
-    }
-    return SessionManager.instance;
-  }
-}
+### DriveShare class
+- [src/patterns/SessionManager.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/patterns/SessionManager.js>)
+
+### What it does in this project
+`SessionManager` stores login sessions in one shared in-memory map. Auth routes and auth middleware both use the same instance so session lookups stay consistent across the app.
+
+### Pattern role mapping
+- Singleton: `SessionManager`
+- Shared instance access: `SessionManager.instance()`
+- Clients:
+  - `src/routes/auth.js`
+  - `src/middleware/auth.js`
+
+### Simple class diagram
+
+```text
++----------------------+
+| SessionManager       |
++----------------------+
+| - _instance          |
+| - sessions : Map     |
++----------------------+
+| + instance()         |
+| + createSession()    |
+| + getUserId()        |
+| + destroySession()   |
++----------------------+
+          ^
+          |
+   used by routes
+   and middleware
 ```
 
-### Class Diagram
-```
-┌─────────────────┐
-│  SessionManager │
-├─────────────────┤
-│  - sessions     │
-│  - instance     │
-├─────────────────┤
-│  + getInstance()│
-│  + create()     │
-│  + get()        │
-│  + destroy()    │
-└─────────────────┘
-```
+### Why it fits
+- There should only be one shared session store.
+- The app should not create separate session maps in different files.
+- The `instance()` method enforces that shared access point.
 
-### Role Mapping
-- **Singleton**: SessionManager class
-- **Client**: Authentication middleware and route handlers
-- **Usage**: User session management across the application
+## 2. Observer Pattern
 
-### Benefits
-- **Global Access**: Single point of access to session data
-- **Memory Efficiency**: Only one instance exists
-- **Thread Safety**: Controlled instantiation prevents race conditions
+### Why this pattern is in the rubric
+The rubric requires an Observer pattern so renters can watch cars and get notifications when conditions are met.
 
-## 2. Observer Pattern - WatchNotifier
+### DriveShare file
+- [src/patterns/WatchNotifier.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/patterns/WatchNotifier.js>)
 
-### Purpose
-The WatchNotifier implements the Observer pattern to notify users when car listings change according to their watch criteria (price drops, availability changes).
+### What it does in this project
+DriveShare lets renters create watch records for a car. A watch can include:
+- a target max price
+- a watched date range
 
-### Implementation
-```javascript
-export async function notifyWatchers(db, carId, eventText) {
-  // Get car details
-  const car = await db.get("SELECT price_per_day_cents, active FROM cars WHERE id = ?", [carId]);
+When a car changes in a way that matters, the app calls `notifyWatchers(...)`. That function checks each watch and creates notifications for the users whose conditions are now satisfied.
 
-  // Get all watchers for this car
-  const watches = await db.all("SELECT user_id, max_price_per_day_cents, watch_start_date, watch_end_date FROM watches WHERE car_id = ?", [carId]);
+### Pattern role mapping
+- Subject / observed thing: a car listing and its state
+- Observer registration: rows in the `watches` table
+- Observer handling logic: `notifyWatchers(...)`
+- Notification result: rows in the `notifications` table
+- Trigger points:
+  - price updates in `src/routes/cars.js`
+  - availability changes in `src/routes/cars.js`
+  - booking cancellation in `src/routes/bookings.js`
 
-  // Notify each watcher that meets criteria
-  for (const watch of watches) {
-    if (meetsNotificationCriteria(watch, car)) {
-      await db.run("INSERT INTO notifications(user_id, type, text) VALUES(?,?,?)", [watch.user_id, "watch", eventText]);
-    }
-  }
-}
-```
+### Simple class diagram
 
-### Class Diagram
-```
-┌─────────────────┐          ┌─────────────────┐
-│   WatchNotifier │          │     Watcher     │
-├─────────────────┤          ├─────────────────┤
-│                 │◄─────────┤  - user_id      │
-│  + notifyWatchers() │      │  - criteria     │
-└─────────────────┘          └─────────────────┘
-                                   │
-                                   │
-                         ┌─────────────────┐
-                         │  Notification   │
-                         ├─────────────────┤
-                         │  - user_id      │
-                         │  - type         │
-                         │  - text         │
-                         └─────────────────┘
+```text
++----------------------+
+| Car Listing          |
++----------------------+
+| id                   |
+| price                |
+| active               |
++----------------------+
+          |
+          | state changes trigger
+          v
++----------------------+
+| notifyWatchers()     |
++----------------------+
+| checks watch rules   |
+| creates notifications|
++----------------------+
+          ^
+          |
++----------------------+
+| Watch rows           |
++----------------------+
+| user_id              |
+| car_id               |
+| max_price            |
+| watch dates          |
++----------------------+
 ```
 
-### Role Mapping
-- **Subject/Observable**: Car listings (price/availability changes)
-- **Observer**: Watch records in database
-- **Concrete Observer**: User watch preferences
-- **Notification**: Database notification records
+### Why it fits
+- Renters subscribe to updates without being tightly coupled to car update logic.
+- The app can notify zero, one, or many watchers when a car changes.
+- Car routes do not need to know how every watcher is stored or evaluated.
 
-### Benefits
-- **Decoupling**: Car changes don't need to know about watchers
-- **Dynamic**: Watchers can be added/removed at runtime
-- **Scalable**: Easy to add new notification types
+## 3. Mediator Pattern
 
-## 3. Mediator Pattern - SearchMediator
+### Why this pattern is in the rubric
+The rubric requires a Mediator pattern to coordinate UI-related communication and create a cohesive interface.
 
-### Purpose
-The SearchMediator centralizes car search logic, coordinating between different search criteria and database queries to provide unified search results.
+### DriveShare class
+- [src/patterns/SearchMediator.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/patterns/SearchMediator.js>)
 
-### Implementation
-```javascript
-class SearchMediator {
-  constructor(db) {
-    this.db = db;
-  }
+### What it does in this project
+`SearchMediator` centralizes car browse and search rules. Instead of spreading search logic across many routes or UI files, the app sends filter criteria into one mediator that coordinates:
+- location filtering
+- date filtering
+- max price filtering
+- overlap filtering against bookings and availability blocks
+- validation of search input
 
-  async searchCars(criteria) {
-    let query = "SELECT * FROM cars WHERE active = 1";
-    let params = [];
+The frontend also reflects this mediator idea because the renter search UI combines several inputs into one coordinated search flow.
 
-    // Location filtering
-    if (criteria.location) {
-      query += " AND pickup_location LIKE ?";
-      params.push(`%${criteria.location}%`);
-    }
+### Pattern role mapping
+- Mediator: `SearchMediator`
+- Colleagues / coordinated inputs:
+  - location
+  - start date
+  - end date
+  - max price
+  - result limit
+- Clients:
+  - `src/routes/cars.js`
+  - renter browse/search UI in `public/index.html` and `public/renter.html`
 
-    // Date range filtering
-    if (criteria.startDate && criteria.endDate) {
-      query += ` AND id NOT IN (
-        SELECT car_id FROM bookings
-        WHERE status IN ('pending','confirmed')
-        AND (? < end_date) AND (? > start_date)
-      )`;
-      params.push(criteria.startDate, criteria.endDate);
-    }
+### Simple class diagram
 
-    // Price filtering
-    if (criteria.maxPrice) {
-      query += " AND price_per_day_cents <= ?";
-      params.push(criteria.maxPrice * 100);
-    }
-
-    return await this.db.all(query, params);
-  }
-}
+```text
+ location ----\
+ start date ---\
+ end date ------> SearchMediator ----> SQL query / results
+ max price ----/
+ browse mode --/
 ```
 
-### Class Diagram
-```
-┌─────────────────┐          ┌─────────────────┐
-│ SearchMediator  │          │   SearchClient  │
-├─────────────────┤          ├─────────────────┤
-│  - db           │◄─────────┤                 │
-├─────────────────┤          └─────────────────┘
-│  + searchCars() │                    │
-│  + filterByLocation()│               │
-│  + filterByDates()   │               │
-│  + filterByPrice()   │               │
-└─────────────────┘                    │
-                              ┌─────────────────┐
-                              │   Car Results   │
-                              └─────────────────┘
-```
+### Why it fits
+- Search rules live in one place.
+- Route handlers do not each rebuild the same filtering logic.
+- The app has one central object deciding how search inputs work together.
 
-### Role Mapping
-- **Mediator**: SearchMediator class
-- **Colleagues**: Location filter, Date filter, Price filter
-- **Client**: Car search API endpoint
+## 4. Builder Pattern
 
-### Benefits
-- **Centralized Logic**: All search logic in one place
-- **Maintainable**: Easy to modify search criteria
-- **Extensible**: New filters can be added easily
+### Why this pattern is in the rubric
+The rubric requires a Builder pattern for clean construction of car listing objects with variable attributes.
 
-## 4. Builder Pattern - CarListingBuilder
+### DriveShare class
+- [src/patterns/CarListingBuilder.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/patterns/CarListingBuilder.js>)
 
-### Purpose
-The CarListingBuilder provides a fluent interface for constructing complex car listing objects with optional parameters and validation.
+### What it does in this project
+Owners create car listings through route logic that uses `CarListingBuilder`. The builder starts with base defaults, then fills in the car data step by step before returning the final listing object to insert into the database.
 
-### Implementation
-```javascript
-class CarListingBuilder {
-  constructor() {
-    this.listing = {};
-  }
+### Pattern role mapping
+- Builder: `CarListingBuilder`
+- Product: the finished car listing object
+- Client: `src/routes/cars.js`
+- Build steps:
+  - `title(...)`
+  - `make(...)`
+  - `model(...)`
+  - `year(...)`
+  - `mileage(...)`
+  - `pickupLocation(...)`
+  - `pricePerDayCents(...)`
+  - `active(...)`
+  - `build()`
 
-  setBasicInfo(make, model, year) {
-    this.listing.make = make;
-    this.listing.model = model;
-    this.listing.year = year;
-    return this;
-  }
+### Simple class diagram
 
-  setPricing(pricePerDay) {
-    this.listing.price_per_day_cents = Math.round(pricePerDay * 100);
-    return this;
-  }
-
-  setLocation(location) {
-    this.listing.pickup_location = location;
-    return this;
-  }
-
-  setDescription(description) {
-    this.listing.description = description;
-    return this;
-  }
-
-  setFeatures(features) {
-    this.listing.features = JSON.stringify(features);
-    return this;
-  }
-
-  build() {
-    // Validation
-    if (!this.listing.make || !this.listing.model || !this.listing.year) {
-      throw new Error("Make, model, and year are required");
-    }
-    if (!this.listing.price_per_day_cents) {
-      throw new Error("Price is required");
-    }
-    return this.listing;
-  }
-}
+```text
++--------------------------+
+| CarListingBuilder        |
++--------------------------+
+| - data                   |
++--------------------------+
+| + title()                |
+| + make()                 |
+| + model()                |
+| + year()                 |
+| + mileage()              |
+| + pickupLocation()       |
+| + pricePerDayCents()     |
+| + active()               |
+| + build()                |
++--------------------------+
+            |
+            v
++--------------------------+
+| Car listing object       |
++--------------------------+
 ```
 
-### Class Diagram
-```
-┌─────────────────────┐
-│ CarListingBuilder   │
-├─────────────────────┤
-│  - listing          │
-├─────────────────────┤
-│  + setBasicInfo()   │
-│  + setPricing()     │
-│  + setLocation()    │
-│  + setDescription() │
-│  + setFeatures()    │
-│  + build()          │
-└─────────────────────┘
-        │
-        ▼
-┌─────────────────────┐
-│   CarListing        │
-├─────────────────────┤
-│  - make             │
-│  - model            │
-│  - year             │
-│  - price            │
-│  - location         │
-│  - description      │
-│  - features         │
-└─────────────────────┘
-```
+### Why it fits
+- Car listings are assembled in a readable step-by-step way.
+- The builder keeps listing construction cleaner than building a large raw object in the route.
+- It supports optional or default values without making the route harder to read.
 
-### Role Mapping
-- **Builder**: CarListingBuilder class
-- **Concrete Builder**: Methods for setting different car attributes
-- **Product**: Car listing object
-- **Director**: Car creation API endpoint
+## 5. Proxy Pattern
 
-### Benefits
-- **Complex Construction**: Handles optional parameters elegantly
-- **Validation**: Ensures required fields are present
-- **Readable**: Fluent interface makes code self-documenting
-- **Flexible**: Easy to add new car attributes
+### Why this pattern is in the rubric
+The rubric requires a Proxy pattern to simulate secure interaction with a payment system.
 
-## 5. Proxy Pattern - PaymentProxy
+### DriveShare classes
+- [src/patterns/PaymentProxy.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/patterns/PaymentProxy.js>)
+  - `PaymentProxy`
+  - `RealPaymentService`
 
-### Purpose
-The PaymentProxy provides a protective layer around payment processing, adding logging, validation, and security checks before delegating to the real payment service.
+### What it does in this project
+DriveShare uses a simulated payment system. The booking route does not talk directly to the real payment service. Instead, it calls `PaymentProxy`, which first checks:
+- the user is logged in
+- the logged-in user is the payer
+- the amount is valid
 
-### Implementation
-```javascript
-class PaymentProxy {
-  constructor(realPaymentService) {
-    this.realService = realPaymentService;
-  }
+If those checks pass, the proxy forwards the call to `RealPaymentService`, which:
+- subtracts money from the renter
+- adds money to the owner
+- inserts a payment row
+- confirms the booking
 
-  async pay(db, userId, bookingId, renterId, ownerId, amountCents) {
-    // Pre-processing: validation and logging
-    console.log(`Processing payment: $${amountCents/100} for booking ${bookingId}`);
+### Pattern role mapping
+- Subject: payment behavior exposed through `pay(...)`
+- Proxy: `PaymentProxy`
+- Real Subject: `RealPaymentService`
+- Client: `src/routes/bookings.js`
 
-    // Security check: ensure user is authorized
-    if (userId !== renterId) {
-      return { ok: false, error: "Unauthorized payment attempt" };
-    }
+### Simple class diagram
 
-    // Business rule: minimum payment
-    if (amountCents < 100) { // $1 minimum
-      return { ok: false, error: "Payment too small" };
-    }
-
-    // Delegate to real service
-    const result = await this.realService.pay(db, bookingId, amountCents);
-
-    // Post-processing: logging and notifications
-    if (result.ok) {
-      console.log(`Payment successful for booking ${bookingId}`);
-    } else {
-      console.error(`Payment failed for booking ${bookingId}: ${result.error}`);
-    }
-
-    return result;
-  }
-}
+```text
++----------------------+
+| bookings route       |
++----------------------+
+          |
+          v
++----------------------+
+| PaymentProxy         |
++----------------------+
+| + pay(...)           |
++----------------------+
+          |
+          v
++----------------------+
+| RealPaymentService   |
++----------------------+
+| + pay(...)           |
++----------------------+
 ```
 
-### Class Diagram
-```
-┌─────────────────┐          ┌─────────────────────┐
-│  PaymentProxy   │          │ RealPaymentService │
-├─────────────────┤          ├─────────────────────┤
-│  - realService  │◄─────────┤                     │
-├─────────────────┤          └─────────────────────┘
-│  + pay()        │                    │
-└─────────────────┘                    │
-        ▲                             │
-        │                             │
-┌─────────────────┐          ┌─────────────────────┐
-│   Client        │          │   Payment Result    │
-└─────────────────┘          └─────────────────────┘
-```
+### Why it fits
+- The proxy controls access before payment logic runs.
+- Security and validation stay outside the real payment implementation.
+- The project simulates a safer external payment interaction without using a real provider.
 
-### Role Mapping
-- **Proxy**: PaymentProxy class
-- **Real Subject**: RealPaymentService class
-- **Subject**: PaymentService interface
-- **Client**: Booking payment endpoint
+## 6. Chain of Responsibility
 
-### Benefits
-- **Security**: Validates payments before processing
-- **Logging**: Tracks all payment attempts
-- **Flexibility**: Can add caching, rate limiting, etc.
-- **Maintainability**: Payment logic separated from business logic
+### Why this pattern is in the rubric
+The rubric requires a Chain of Responsibility for password recovery using the three security questions.
 
-## 6. Chain of Responsibility - PasswordRecoveryChain
+### DriveShare file
+- [src/patterns/PasswordRecoveryChain.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/patterns/PasswordRecoveryChain.js>)
 
-### Purpose
-The PasswordRecoveryChain implements a sequential validation process for password recovery, where each handler checks a different security question before allowing password reset.
+### What it does in this project
+Password recovery is built as a chain of three handlers. Each handler checks one question index. If the current answer is correct, the request moves to the next handler. If any answer fails, the whole recovery flow stops.
 
-### Implementation
-```javascript
-class SecurityQuestionHandler {
-  constructor(question, nextHandler = null) {
-    this.question = question;
-    this.nextHandler = nextHandler;
-  }
+### Pattern role mapping
+- Handler: `QuestionHandler`
+- Concrete handlers: three `QuestionHandler` objects for question 1, 2, and 3
+- Chain builder: `buildRecoveryChain()`
+- Client: `src/routes/auth.js`
+- Request: the `answers` object sent during recovery
 
-  async handle(db, userId, answers) {
-    const userAnswer = await db.get(
-      "SELECT answer FROM security_questions WHERE user_id = ? AND question = ?",
-      [userId, this.question]
-    );
+### Simple class diagram
 
-    if (!userAnswer || userAnswer.answer !== answers[this.question]) {
-      throw new Error(`Incorrect answer for: ${this.question}`);
-    }
-
-    if (this.nextHandler) {
-      return await this.nextHandler.handle(db, userId, answers);
-    }
-
-    return true; // All questions answered correctly
-  }
-}
-
-// Usage in recovery route
-const chain = new SecurityQuestionHandler("What was your first pet's name?",
-  new SecurityQuestionHandler("What city were you born in?",
-    new SecurityQuestionHandler("What was your first school?")
-  )
-);
+```text
++----------------------+
+| QuestionHandler (1)  |
++----------------------+
+| + handle(...)        |
+| + setNext(...)       |
++----------------------+
+          |
+          v
++----------------------+
+| QuestionHandler (2)  |
++----------------------+
+          |
+          v
++----------------------+
+| QuestionHandler (3)  |
++----------------------+
 ```
 
-### Class Diagram
-```
-┌─────────────────────────┐
-│ SecurityQuestionHandler │
-├─────────────────────────┤
-│  - question             │
-│  - nextHandler          │
-├─────────────────────────┤
-│  + handle()             │
-└─────────────────────────┘
-              ▲
-              │
-        ┌─────┴─────┐
-        │           │
-┌─────────────┐ ┌─────────────┐
-│ Question 1  │ │ Question 2  │
-└─────────────┘ └─────────────┘
-        │           │
-        └─────┬─────┘
-              │
-        ┌─────────────┐
-        │ Question 3  │
-        └─────────────┘
+### Why it fits
+- Each question is handled by one handler object.
+- The request moves from one handler to the next.
+- The flow stops immediately when one handler fails.
+
+## Pattern-to-Rubric Summary
+
+```text
+Rubric Requirement                         DriveShare Implementation
+---------------------------------------------------------------------------
+Singleton for session management           SessionManager
+Observer for watch notifications           WatchNotifier / watches table
+Mediator for coordinated UI search flow    SearchMediator
+Builder for car listing creation           CarListingBuilder
+Proxy for payment simulation               PaymentProxy + RealPaymentService
+Chain of Responsibility for recovery       QuestionHandler chain
 ```
 
-### Role Mapping
-- **Handler**: SecurityQuestionHandler class
-- **Concrete Handler**: Individual question validators
-- **Client**: Password recovery endpoint
-- **Request**: Security question answers
+## Where the Patterns Connect to Features
 
-### Benefits
-- **Modular**: Each question is independently validated
-- **Extensible**: Easy to add/remove questions
-- **Flexible**: Chain can be reconfigured
-- **Fail-fast**: Stops at first incorrect answer
+### Authentication
+- `SessionManager` supports login/logout/session lookup.
+- `PasswordRecoveryChain` supports recovery with 3 security questions.
 
-## Pattern Integration Summary
+### Search and Booking
+- `SearchMediator` controls browse/search filtering.
+- `PaymentProxy` confirms pending bookings after payment.
 
-### Architectural Overview
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    DriveShare Application                   │
-├─────────────────────────────────────────────────────────────┤
-│  Routes: auth, bookings, cars, messages, notifications      │
-├─────────────────────────────────────────────────────────────┤
-│  Patterns:                                                   │
-│  • Singleton (SessionManager) - Global session state        │
-│  • Observer (WatchNotifier) - Car change notifications      │
-│  • Mediator (SearchMediator) - Unified search logic         │
-│  • Builder (CarListingBuilder) - Complex object construction│
-│  • Proxy (PaymentProxy) - Payment security & logging        │
-│  • Chain of Resp (PasswordRecovery) - Sequential validation │
-├─────────────────────────────────────────────────────────────┤
-│  Services: email, availability, database                    │
-└─────────────────────────────────────────────────────────────┘
-```
+### Owner Listing Management
+- `CarListingBuilder` creates listing objects before saving.
 
-### Pattern Interactions
-- **SessionManager** provides user context for all authenticated operations
-- **WatchNotifier** triggers notifications that may use **EmailService**
-- **SearchMediator** coordinates complex queries for car listings
-- **CarListingBuilder** creates objects that **SearchMediator** filters
-- **PaymentProxy** secures transactions that trigger **WatchNotifier** updates
-- **PasswordRecoveryChain** validates users for **SessionManager** operations
+### Watch and Notifications
+- `WatchNotifier` checks watches and creates notifications when a watched car changes.
 
-### Quality Attributes Addressed
-- **Maintainability**: Each pattern encapsulates specific concerns
-- **Extensibility**: New features can leverage existing patterns
-- **Testability**: Patterns enable focused unit testing
-- **Security**: Proxy pattern adds security layers
-- **Performance**: Mediator centralizes expensive operations
-- **Usability**: Builder simplifies complex object creation
+## Design Consistency Notes
 
-This comprehensive pattern implementation demonstrates advanced software design principles while maintaining practical usability and maintainability.</content>
-<parameter name="filePath">g:\School_STuff\School_DAnk\CIS 476 Software Arch+Design\TermProject\DriveShare_ClassProject\PATTERN_DOCUMENTATION.md
+This documentation was updated to match the current project code and rubric goals:
+- inbox-style messaging instead of manual ID-based messaging
+- pending booking plus explicit payment confirmation
+- owner and renter rental history
+- renter-to-car and owner-to-renter review flow
+- watch notifications for price and availability
+
+## Related Files
+
+- [README.md](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/README.md>)
+- [src/routes/auth.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/routes/auth.js>)
+- [src/routes/cars.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/routes/cars.js>)
+- [src/routes/bookings.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/routes/bookings.js>)
+- [src/routes/messages.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/routes/messages.js>)
+- [src/routes/notifications.js](</g:/School_STuff/School_DAnk/CIS 476 Software Arch+Design/TermProject/DriveShare_ClassProject/src/routes/notifications.js>)

@@ -1,9 +1,9 @@
-// =============================================
-// FILE: photos.js
-// Photo search routes (Unsplash API integration with caching)
-// Created: 2024-12-19
-// Updated: 2024-12-19
-// =============================================
+/*
+ * Author:
+ * Created on: January 11, 2026
+ * Last updated: April 12, 2026
+ * Purpose: Provides an endpoint to search for car photos using the Unsplash API.
+ */
 
 import express from "express";
 
@@ -35,8 +35,8 @@ export default function photoRoutes() {
 
   // GET /api/photos/unsplash?query=2022%20Honda%20Civic%20car
   // Search for car photos using Unsplash API with 24-hour caching
-  // Business rules: requires UNSPLASH_ACCESS_KEY env var, valid query required
-  // Edge cases: missing API key, empty query, API errors, no results
+  // Needs a valid query and an UNSPLASH_ACCESS_KEY value.
+  // Handles missing config, empty input, API errors, and no-result cases.
   // Performance: in-memory cache prevents repeated API calls for same query
   r.get("/unsplash", async (req, res) => {
     const accessKey = process.env.UNSPLASH_ACCESS_KEY;

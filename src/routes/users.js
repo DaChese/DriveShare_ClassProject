@@ -1,9 +1,9 @@
-// =============================================
-// FILE: users.js
-// User profile routes (get user info)
-// Created: 2024-12-19
-// Updated: 2024-12-19
-// =============================================
+/*
+ * Author:
+ * Created on: January 11, 2026
+ * Last updated: April 12, 2026
+ * Purpose: Provides endpoints for fetching user profile information. 
+ */
 
 import express from "express";
 import { requireAuth } from "../middleware/auth.js";
@@ -17,8 +17,8 @@ export default function userRoutes(db) {
 
   // GET /api/users/:id
   // Get basic user profile information
-  // Business rules: authenticated user
-  // Edge cases: user not found
+  // Login is required.
+  // Returns 404 if the user does not exist.
   r.get("/:id", requireAuth, async (req, res) => {
     const uid = Number(req.params.id);
     const u = await db.get("SELECT id, display_name FROM users WHERE id = ?", [uid]);

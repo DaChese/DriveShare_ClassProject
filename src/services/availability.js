@@ -1,16 +1,16 @@
+/*
+ * Author:
+ * Created on: January 11, 2026
+ * Last updated: April 12, 2026
+ * Purpose: Checks whether a car is available for a requested date range.
+ */
 
 // =============================================
-// AVAILABILITY SERVICE
-// Car availability checking utilities
-// Updated: 2024-12-19
+// OVERLAP CHECKS
 // =============================================
 
-// Check if a date range overlaps with bookings or blocks //
-// Works by checking: is new booking's start before existing end? AND new end after existing start? ////
-// Heads up: checks both pending/confirmed bookings and manual availability blocks //////
-// Watch for: multiple overlaps, edge dates //
 export async function hasOverlap(db, carId, startDate, endDate) {
-  // overlap rule: (newStart < existingEnd) AND (newEnd > existingStart)
+  // Pending and confirmed bookings both block the car.
   const overlapBooking = await db.get(
     `SELECT 1 FROM bookings
      WHERE car_id = ?
@@ -21,6 +21,7 @@ export async function hasOverlap(db, carId, startDate, endDate) {
   );
   if (overlapBooking) return true;
 
+  // Owner availability blocks also count as unavailable dates.
   const overlapBlock = await db.get(
     `SELECT 1 FROM availability_blocks
      WHERE car_id = ?
@@ -31,9 +32,10 @@ export async function hasOverlap(db, carId, startDate, endDate) {
   return !!overlapBlock;
 }
 
-// Get all bookings and blocks for a car ////
-// Pull both active bookings (pending/confirmed) and owner-set availability blocks //////  
-// Returns: { bookings: [...], blocks: [...] }, sorted by date so we can see the timeline //
+// =============================================
+// TIMELINE DATA
+// =============================================
+
 export async function listBlocksAndBookings(db, carId) {
   const bookings = await db.all(
     `SELECT id, start_date, end_date, status, total_cents

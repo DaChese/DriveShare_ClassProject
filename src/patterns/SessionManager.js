@@ -18,7 +18,7 @@ import { v4 as uuidv4 } from "uuid";
 class SessionManager {
   static _instance = null;
 
-  // Singleton access point used by auth routes and middleware.
+  // Singleton access point used by auth routes and middleware ////////
   static instance() {
     if (!SessionManager._instance) {
       SessionManager._instance = new SessionManager();

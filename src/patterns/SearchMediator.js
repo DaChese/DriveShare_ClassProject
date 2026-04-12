@@ -14,7 +14,7 @@ class SearchMediator {
     this.db = db;
   }
 
-  // Used for renter trip searches with location, dates, and optional price cap.
+  // Used for renter trip searches with location, dates, and optional price cap ///
   async searchCars(criteria) {
     const { location, startDate, endDate, maxPrice, limit = 500 } = criteria;
 
@@ -37,7 +37,7 @@ class SearchMediator {
       params.push(cents);
     }
 
-    // Business rule: do not return cars that overlap an active booking or owner block.
+    // Skip cars that overlap an active booking or owner block.
     if (startDate && endDate) {
       query += `
         AND NOT EXISTS (
@@ -61,7 +61,7 @@ class SearchMediator {
     return await this.db.all(query, params);
   }
 
-  // Used when the user is browsing without a full trip search yet.
+  // Used when the user is browsing without a full trip search yet. ///
   async browseCars(criteria) {
     const { location, maxPrice, limit = 500 } = criteria;
 
@@ -85,7 +85,7 @@ class SearchMediator {
     return await this.db.all(query, params);
   }
 
-  // Edge-case checks shared by both browse and search endpoints.
+  // Edge-case checks shared by both browse and search endpoints. ////
   validateCriteria(criteria) {
     const { location, startDate, endDate, maxPrice } = criteria;
 

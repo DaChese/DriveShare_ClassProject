@@ -28,13 +28,13 @@ export default function bookingRoutes(db) {
   // =============================================
 
   // POST /api/bookings/
-  // Expects carId, startDate, and endDate.
+  // expects carId, startDate, and endDate /////
   r.post("/", requireAuth, async (req, res) => {
     const { carId, startDate, endDate } = req.body || {};
     const cid = Number(carId);
     if (!cid || !startDate || !endDate) return res.status(400).json({ ok: false, error: "Missing fields." });
 
-    // Business rule: a car cannot have overlapping pending or confirmed bookings.
+    //// a car cannot have overlapping pending or confirmed bookings.
     const overlap = await db.get(
       `SELECT 1 FROM bookings
        WHERE car_id = ?
@@ -45,7 +45,7 @@ export default function bookingRoutes(db) {
     );
     if (overlap) return res.status(409).json({ ok: false, error: "Car already booked for that range." });
 
-    // Business rule: owner availability blocks also prevent booking.
+    // Owner availability blocks also prevent booking.
     const overlapBlock = await db.get(
       `SELECT 1 FROM availability_blocks
        WHERE car_id = ?
@@ -61,7 +61,7 @@ export default function bookingRoutes(db) {
     const days = Math.max(1, Math.ceil((Date.parse(endDate) - Date.parse(startDate)) / (1000 * 60 * 60 * 24)));
     const total = days * car.price_per_day_cents;
 
-    // DB side-effect: creates a pending booking first, then payment confirms it later.
+    // Creates a pending booking first, then payment confirms it later.
     const result = await db.run(
       "INSERT INTO bookings(car_id, renter_id, start_date, end_date, status, total_cents) VALUES(?,?,?,?,?,?)",
       [cid, req.userId, startDate, endDate, "pending", total]
@@ -72,7 +72,7 @@ export default function bookingRoutes(db) {
     const owner = await db.get("SELECT display_name, email FROM users WHERE id = ?", [car.owner_id]);
     const carDetails = await db.get("SELECT title, make, model, year FROM cars WHERE id = ?", [cid]);
 
-    // DB side-effect: creates an in-app notification for the owner.
+    // Creates an in-app notification for the owner.
     await db.run("INSERT INTO notifications(user_id, type, text) VALUES(?,?,?)",
       [car.owner_id, "booking", `New booking request for car #${cid} (booking #${bookingId}).`]
     );
@@ -104,7 +104,7 @@ export default function bookingRoutes(db) {
 
     if (row.status === "cancelled") return res.json({ ok: true, message: "Already cancelled." });
 
-    // DB side-effect: marks the booking cancelled and notifies both sides.
+    // Marks the booking cancelled and notifies both sides.
     await db.run("UPDATE bookings SET status='cancelled' WHERE id = ?", [bookingId]);
 
     await db.run("INSERT INTO notifications(user_id, type, text) VALUES(?,?,?)",
@@ -123,7 +123,7 @@ export default function bookingRoutes(db) {
   // =============================================
 
   // POST /api/bookings/:id/pay
-  // Confirms a pending booking through the payment proxy.
+  // Confirms a pending booking through the payment proxy ////
   r.post("/:id/pay", requireAuth, async (req, res) => {
     const bookingId = Number(req.params.id);
     const booking = await db.get(
@@ -134,7 +134,7 @@ export default function bookingRoutes(db) {
     if (booking.status === "confirmed") return res.json({ ok: true, message: "Booking already confirmed." });
     if (booking.status === "cancelled") return res.status(400).json({ ok: false, error: "Cancelled bookings cannot be paid." });
 
-    // Business rule: only the renter pays, and the proxy checks that before money moves.
+    // Only the renter can pay, and the proxy checks that before money moves.
     const rPay = await payment.pay(db, req.userId, bookingId, booking.renter_id, booking.owner_id, booking.total_cents);
     if (!rPay.ok) return res.status(400).json(rPay);
 
@@ -142,7 +142,7 @@ export default function bookingRoutes(db) {
     const owner = await db.get("SELECT display_name, email FROM users WHERE id = ?", [booking.owner_id]);
     const carDetails = await db.get("SELECT title, make, model, year FROM cars WHERE id = ?", [booking.car_id]);
 
-    // DB side-effect: adds payment notifications after balances and booking status are updated.
+    //// adds payment notifications after balances and booking status are updated //
     await db.run("INSERT INTO notifications(user_id, type, text) VALUES(?,?,?)",
       [booking.owner_id, "payment", `Booking #${bookingId} was paid.`]
     );
@@ -161,7 +161,7 @@ export default function bookingRoutes(db) {
   // =============================================
 
   // GET /api/bookings/history
-  // Returns both renter and owner history for the logged-in user.
+  ///// Returns both renter and owner history for the logged-in user /////////
   r.get("/history", requireAuth, async (req, res) => {
     const userId = req.userId;
 
@@ -227,7 +227,7 @@ export default function bookingRoutes(db) {
   // =============================================
 
   // POST /api/bookings/:id/review
-  // Lets the renter review the car or the owner review the renter.
+  // Lets the renter review the car or the owner review the renter ///
   r.post("/:id/review", requireAuth, async (req, res) => {
     const bookingId = Number(req.params.id);
     const { rating, comment } = req.body || {};
@@ -260,7 +260,7 @@ export default function bookingRoutes(db) {
 
     const normalizedComment = comment ? String(comment).trim() : null;
 
-    // DB side-effect: creates or updates one review per booking/reviewer pair.
+    ///// creates or updates one review per booking/reviewer pair ///
     await db.run(
       `INSERT INTO reviews(booking_id, reviewer_id, reviewee_type, reviewee_id, rating, comment)
        VALUES(?,?,?,?,?,?)

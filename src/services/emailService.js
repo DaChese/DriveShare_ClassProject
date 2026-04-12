@@ -1,42 +1,48 @@
+/*
+ * Author:
+ * Created on: January 11, 2026
+ * Last updated: April 12, 2026
+ * Purpose: Sends DriveShare email notifications for booking and message events.
+ */
+
+// =============================================
+// IMPORTS
+// =============================================
+
+import nodemailer from "nodemailer";
+
 // =============================================
 // EMAIL SERVICE
-// DriveShare email notification service
-// Updated: 2024-12-19
 // =============================================
 
-import nodemailer from 'nodemailer';
-
-// EmailService - Sends emails when stuff happens in the app //
-// Uses nodemailer; falls back to console logging if email's off ////
 class EmailService {
   constructor() {
-    // Okay, set up the mail transporter //////
-    // If running in production, replace with real SMTP creds //
     this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      host: process.env.SMTP_HOST || "smtp.gmail.com",
       port: process.env.SMTP_PORT || 587,
-      secure: false, // true for 465, false for other ports
+      secure: false,
       auth: {
-        user: process.env.SMTP_USER || 'your-email@gmail.com',
-        pass: process.env.SMTP_PASS || 'your-app-password'
+        user: process.env.SMTP_USER || "your-email@gmail.com",
+        pass: process.env.SMTP_PASS || "your-app-password"
       }
     });
 
-    this.enabled = process.env.EMAIL_ENABLED === 'true';
+    this.enabled = process.env.EMAIL_ENABLED === "true";
   }
 
-  // Actually send the email (or log it if disabled) ////
-  // Check: is email on? If yes, fire it off; if no, just console log //////
-  // Heads up: handles errors gracefully, returns success/fail flag //
-  async sendEmail(to, subject, html, text = '') {
+  // =============================================
+  // CORE SEND HELPERS
+  // =============================================
+
+  async sendEmail(to, subject, html, text = "") {
     if (!this.enabled) {
-      console.log(`📧 EMAIL DISABLED - Would send to ${to}: ${subject}`);
+      console.log(`[email disabled] Would send to ${to}: ${subject}`);
       return true;
     }
 
     try {
       const mailOptions = {
-        from: process.env.FROM_EMAIL || 'driveshare@example.com',
+        from: process.env.FROM_EMAIL || "driveshare@example.com",
         to,
         subject,
         html,
@@ -44,25 +50,22 @@ class EmailService {
       };
 
       const info = await this.transporter.sendMail(mailOptions);
-      console.log(`📧 Email sent to ${to}: ${info.messageId}`);
+      console.log(`[email sent] ${to}: ${info.messageId}`);
       return true;
     } catch (error) {
-      console.error(`❌ Email failed to ${to}:`, error.message);
+      console.error(`[email failed] ${to}:`, error.message);
       return false;
     }
   }
 
-  // Strip HTML tags to make plain text fallback ////
   stripHtml(html) {
-    return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+    return html.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
   }
 
   // =============================================
-  // NOTIFICATION METHODS
+  // NOTIFICATION EMAILS
   // =============================================
 
-  // Tell owner: someone wants to book their car //////
-  // Includes all booking details so they can decide //
   async sendBookingRequest(ownerEmail, renterName, booking, car) {
     const subject = `New Booking Request - ${car.title || `${car.year} ${car.make} ${car.model}`}`;
     const html = `
@@ -83,8 +86,6 @@ class EmailService {
     return await this.sendEmail(ownerEmail, subject, html);
   }
 
-  // Tell renter: booking is locked in ////
-  // Pass owner contact info so they can coordinate //////
   async sendBookingConfirmation(renterEmail, ownerName, booking, car) {
     const subject = `Booking Confirmed - ${car.title || `${car.year} ${car.make} ${car.model}`}`;
     const html = `
@@ -105,8 +106,6 @@ class EmailService {
     return await this.sendEmail(renterEmail, subject, html);
   }
 
-  // Tell owner: payment came through, we're good to go ////
-  // Heads up: booking is now confirmed and ready //////
   async sendPaymentNotification(ownerEmail, renterName, booking, car) {
     const subject = `Payment Received - Booking #${booking.id}`;
     const html = `
@@ -125,11 +124,9 @@ class EmailService {
     return await this.sendEmail(ownerEmail, subject, html);
   }
 
-  // Tell someone they got reviewed //
-  // Includes stars, comment, and link to see it in their history ////
   async sendReviewNotification(revieweeEmail, reviewerName, review, booking) {
     const subject = `New Review from ${reviewerName}`;
-    const stars = '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
+    const stars = "*".repeat(review.rating) + "-".repeat(5 - review.rating);
     const html = `
       <h2>New Review Received</h2>
       <p>You have received a new review for booking #${booking.id}.</p>
@@ -137,7 +134,7 @@ class EmailService {
       <ul>
         <li><strong>Reviewer:</strong> ${reviewerName}</li>
         <li><strong>Rating:</strong> ${stars} (${review.rating}/5)</li>
-        ${review.comment ? `<li><strong>Comment:</strong> "${review.comment}"</li>` : ''}
+        ${review.comment ? `<li><strong>Comment:</strong> "${review.comment}"</li>` : ""}
       </ul>
       <p><a href="http://localhost:3000/history.html">View in History</a></p>
     `;
@@ -145,8 +142,6 @@ class EmailService {
     return await this.sendEmail(revieweeEmail, subject, html);
   }
 
-  // Tell someone: new message arrived about a car //////
-  // Link them back to the messages section //
   async sendMessageNotification(recipientEmail, senderName, car) {
     const subject = `New Message - ${car.title || `${car.year} ${car.make} ${car.model}`}`;
     const html = `
@@ -163,5 +158,8 @@ class EmailService {
   }
 }
 
-// Export singleton instance
+// =============================================
+// SINGLETON EXPORT
+// =============================================
+
 export default new EmailService();

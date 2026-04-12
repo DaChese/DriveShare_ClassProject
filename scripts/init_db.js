@@ -29,7 +29,7 @@ async function ensureColumn(db, table, colName, colTypeSql) {
   const info = await db.all(`PRAGMA table_info(${table});`);
   const exists = info.some((c) => c.name === colName);
 
-  // Edge case: skip ALTER TABLE if the column already exists in an older database file.
+  // Skip this if the column already exists in an older database file.
   if (!exists) {
     await db.exec(`ALTER TABLE ${table} ADD COLUMN ${colName} ${colTypeSql};`);
     console.log(`Added column ${table}.${colName}`);
@@ -47,7 +47,7 @@ async function main() {
 
   await db.exec(schema);
 
-  // DB side-effect: applies lightweight migrations so the sqlite file does not need to be deleted and recreated.
+  // Applies lightweight migrations so the sqlite file does not need to be deleted and recreated.
   await ensureColumn(db, "watches", "watch_start_date", "TEXT");
   await ensureColumn(db, "watches", "watch_end_date", "TEXT");
   await ensureColumn(db, "messages", "is_read", "INTEGER NOT NULL DEFAULT 0");

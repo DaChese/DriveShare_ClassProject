@@ -18,7 +18,7 @@ import emailService from "../services/emailService.js";
 // =============================================
 
 async function ownerCanMessageRenter(db, carId, ownerId, renterId) {
-  // Business rule: owners can only message renters tied to this car by a booking or existing thread.
+  // Owners can only message renters tied to this car by a booking or existing thread.
   const priorBooking = await db.get(
     `SELECT 1
      FROM bookings b
@@ -191,7 +191,7 @@ export default function messageRoutes(db) {
         if (toId === ownerId) return res.status(400).json({ ok: false, error: "Can't message yourself." });
         renterId = toId;
 
-        // Business rule: owners can only start or continue valid owner-renter threads for this car.
+        // Owners can only start or continue valid owner-renter threads for this car.
         const allowed = await ownerCanMessageRenter(db, cid, ownerId, renterId);
         if (!allowed) {
           return res.status(403).json({ ok: false, error: "Owner can only message renters with a booking or existing thread for this car." });
@@ -203,7 +203,7 @@ export default function messageRoutes(db) {
         }
       }
 
-      // DB side-effect: saves the message row inside the owner/renter conversation.
+      // Saves the message row inside the owner/renter conversation.
       await db.run(
         "INSERT INTO messages(car_id, owner_id, renter_id, sender_id, body) VALUES(?,?,?,?,?)",
         [cid, ownerId, renterId, req.userId, msg]
@@ -213,7 +213,7 @@ export default function messageRoutes(db) {
       const recipient = await db.get("SELECT display_name, email FROM users WHERE id = ?", [toId]);
       const carDetails = await db.get("SELECT title, make, model, year FROM cars WHERE id = ?", [cid]);
 
-      // DB side-effect: creates a message notification with enough data for the UI to reopen the thread.
+      // Creates a message notification with enough data for the UI to reopen the thread.
       const notifText = `car_id:${cid}|from_user:${req.userId}|sender_name:${sender.display_name}|car_name:${carDetails.title || `${carDetails.year} ${carDetails.make} ${carDetails.model}`}`;
       await db.run(
         "INSERT INTO notifications(user_id, type, text) VALUES(?,?,?)",
@@ -261,7 +261,7 @@ export default function messageRoutes(db) {
         return res.status(403).json({ ok: false, error: "Not allowed to mark this message as read." });
       }
 
-      // Edge case: only mark messages read when they came from the other person.
+      // Only mark messages as read when they came from the other person.
       if (message.sender_id !== req.userId) {
         await db.run("UPDATE messages SET is_read = 1 WHERE id = ?", [messageId]);
       }
