@@ -1,8 +1,8 @@
-# DriveShare Project!!!!
+# DriveShare Project!!!
 
 Aldo Medina and Rania Dayekh
 
-DriveShare is a car-sharing web app built with Node.js, Express, SQLite, and vanilla HTML/CSS/JavaScript. It focuses on the main owner and renter flows while also showing six design patterns.
+DriveShare is a car-sharing web app built with Node.js, Express, SQLite, and HTML/CSS/JavaScript. It focuses on the main owner and renter flows while also showing six design patterns.
 
 ## Overview
 
@@ -245,14 +245,6 @@ http://localhost:3000
 
 The project includes dev seed routes to help with demos.
 
-Examples:
-
-```bash
-POST /api/dev/seed-cars
-POST /api/dev/reset-seeded-cars
-GET /api/dev/seed-status
-```
-
 These routes create tagged demo cars for the logged-in owner so demo data can be reset without wiping the whole database.
 
 ## Security Notes
@@ -262,52 +254,3 @@ These routes create tagged demo cars for the logged-in owner so demo data can be
 - Sessions use an in-memory singleton session manager.
 - Authenticated routes use middleware checks.
 - Owner/renter actions are checked before bookings, payments, and messages are allowed.
-
-## Project Structure
-
-```
-DriveShare_ClassProject/
-|-- server.js
-|-- package.json
-|-- README.md
-|-- PATTERN_DOCUMENTATION.md
-|-- driveshare.sqlite
-|-- db/
-|   `-- schema.sql
-|-- public/
-|   |-- index.html
-|   |-- owner.html
-|   |-- renter.html
-|   |-- car.html
-|   |-- messages.html
-|   |-- notifications.html
-|   |-- history.html
-|   |-- login.html
-|   |-- register.html
-|   `-- recover.html
-|-- scripts/
-|   `-- init_db.js
-`-- src/
-    |-- db.js
-    |-- middleware/
-    |   `-- auth.js
-    |-- patterns/
-    |   |-- SessionManager.js
-    |   |-- WatchNotifier.js
-    |   |-- SearchMediator.js
-    |   |-- CarListingBuilder.js
-    |   |-- PaymentProxy.js
-    |   `-- PasswordRecoveryChain.js
-    |-- routes/
-    |   |-- auth.js
-    |   |-- bookings.js
-    |   |-- cars.js
-    |   |-- messages.js
-    |   |-- notifications.js
-    |   |-- users.js
-    |   |-- photos.js
-    |   `-- devSeed.js
-    `-- services/
-        |-- availability.js
-        `-- emailService.js
-```
