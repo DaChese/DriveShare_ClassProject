@@ -245,14 +245,6 @@ http://localhost:3000
 
 The project includes dev seed routes to help with demos.
 
-Examples:
-
-```bash
-POST /api/dev/seed-cars
-POST /api/dev/reset-seeded-cars
-GET /api/dev/seed-status
-```
-
 These routes create tagged demo cars for the logged-in owner so demo data can be reset without wiping the whole database.
 
 ## Security Notes
